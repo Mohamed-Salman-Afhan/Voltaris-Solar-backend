@@ -1,0 +1,9 @@
+version: "3"
+agent:
+  authtoken: "37SlIo0hZ9hdNQxxzxEM6Tnw4Fy_2LZDYmxnFhdPBH3vhPKVU"
+tunnels:
+  back-end:
+    proto: http
+    addr: 8000
+    # If you have a paid plan and want a fixed hostname, add:
+    hostname: lapelled-homelessly-maci.ngrok-free.dev
