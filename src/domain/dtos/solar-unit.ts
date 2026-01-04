@@ -24,6 +24,6 @@ export const UpdateSolarUnitDto = z.object({
 });
 
 export const GetAllEnergyGenerationRecordsQueryDto = z.object({
-  groupBy: z.enum(["date"]).optional(),
+  groupBy: z.enum(["date", "hour", "weekly"]).optional(),
   limit: z.string().min(1),
 });

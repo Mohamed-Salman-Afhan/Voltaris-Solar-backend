@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { EnergyGenerationRecord } from "../../infrastructure/entities/EnergyGenerationRecord";
 import { SolarUnit } from "../../infrastructure/entities/SolarUnit";
+import { AnomalyDetectionService } from "../anomaly-detection";
 
 export const DataAPIEnergyGenerationRecordDto = z.object({
     _id: z.string(),
@@ -56,6 +57,9 @@ export const syncEnergyGenerationRecords = async () => {
 
                 await EnergyGenerationRecord.insertMany(recordsToInsert);
                 console.log(`Synced ${recordsToInsert.length} new energy generation records`);
+
+                // Trigger Anomaly Detection (Requirement 5.2)
+                await AnomalyDetectionService.analyzeRecords(recordsToInsert);
             }
             else {
                 console.log("No new records to sync");
