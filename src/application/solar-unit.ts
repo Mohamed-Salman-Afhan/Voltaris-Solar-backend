@@ -44,6 +44,7 @@ export const createSolarUnit = async (
       installationDate: new Date(data.installationDate),
       capacity: data.capacity,
       status: data.status,
+      location: data.location,
     };
 
     const createdSolarUnit = await SolarUnit.create(newSolarUnit);
@@ -110,7 +111,7 @@ export const updateSolarUnit = async (
   next: NextFunction
 ) => {
   const { id } = req.params;
-  const { serialNumber, installationDate, capacity, status, userId } = req.body;
+  const { serialNumber, installationDate, capacity, status, userId, location } = req.body;
   const solarUnit = await SolarUnit.findById(id);
 
   if (!solarUnit) {
@@ -123,6 +124,7 @@ export const updateSolarUnit = async (
     capacity,
     status,
     userId,
+    location,
   });
 
   res.status(200).json(updatedSolarUnit);

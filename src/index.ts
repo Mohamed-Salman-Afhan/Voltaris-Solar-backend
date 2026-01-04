@@ -1,6 +1,8 @@
 import "dotenv/config";
 import express from "express";
 import energyGenerationRecordRouter from "./api/energy-generation-record";
+import weatherRouter from "./api/weather";
+import capacityFactorRouter from "./api/capacity-factor";
 import { globalErrorHandler } from "./api/middlewares/global-error-handling-middleware";
 import { loggerMiddleware } from "./api/middlewares/logger-middleware";
 import solarUnitRouter from "./api/solar-unit";
@@ -25,6 +27,8 @@ server.use(express.json());
 server.use("/api/solar-units", solarUnitRouter);
 server.use("/api/energy-generation-records", energyGenerationRecordRouter);
 server.use("/api/users", usersRouter);
+server.use("/api/weather", weatherRouter);
+server.use("/api/capacity-factor", capacityFactorRouter);
 
 server.use(globalErrorHandler);
 
