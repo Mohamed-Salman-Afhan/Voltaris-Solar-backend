@@ -1,26 +1,29 @@
-import { connectDB } from "../infrastructure/db";
-import { EnergyGenerationRecord } from "../infrastructure/entities/EnergyGenerationRecord";
-import { Anomaly } from "../infrastructure/entities/Anomaly";
 import mongoose from "mongoose";
+import { SolarUnit } from "../infrastructure/entities/SolarUnit";
+import { Anomaly } from "../infrastructure/entities/Anomaly";
+import { CapacityFactorRecord } from "../infrastructure/entities/CapacityFactorRecord";
+import { WeatherData } from "../infrastructure/entities/WeatherData";
+import { connectDB } from "../infrastructure/db";
 import dotenv from "dotenv";
 
 dotenv.config();
 
-const run = async () => {
+async function clear() {
     try {
-        if (!process.env.MONGODB_URI && process.env.MONGODB_URL) {
-            process.env.MONGODB_URI = process.env.MONGODB_URL;
-        }
         await connectDB();
-        console.log("Clearing Energy Records and Anomalies to force re-sync...");
-        await EnergyGenerationRecord.deleteMany({});
+        console.log("Clearing all backend operational data...");
+
         await Anomaly.deleteMany({});
-        console.log("Cleared all records.");
-    } catch (e) {
-        console.error("Error clearing DB:", e);
+        await CapacityFactorRecord.deleteMany({});
+        await WeatherData.deleteMany({});
+        await SolarUnit.deleteMany({});
+
+        console.log("Backend database cleared successfully (Users preserved).");
+    } catch (error) {
+        console.error("Error clearing backend database:", error);
     } finally {
         await mongoose.disconnect();
     }
-};
+}
 
-run();
+clear();

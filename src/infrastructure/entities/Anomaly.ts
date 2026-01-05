@@ -2,7 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IAnomaly extends Document {
     solarUnitId: mongoose.Types.ObjectId;
-    anomalyType: 'ZERO_GENERATION' | 'SUDDEN_DROP' | 'ERRATIC_FLUCTUATION' | 'PERFORMANCE_DEGRADATION';
+    anomalyType: 'ZERO_GENERATION' | 'SUDDEN_DROP' | 'ERRATIC_FLUCTUATION' | 'PERFORMANCE_DEGRADATION' | 'INVERTER_OFFLINE' | 'PANEL_SHADING' | 'GRID_INSTABILITY' | 'TEMPERATURE_OVERHEAT';
     severity: 'CRITICAL' | 'WARNING' | 'INFO';
     detectionTimestamp: Date;      // When the issue occurred
     description: string;           // e.g., "Zero output detected at peak hour"
@@ -19,7 +19,16 @@ const AnomalySchema: Schema = new Schema({
     solarUnitId: { type: Schema.Types.ObjectId, ref: 'SolarUnit', required: true },
     anomalyType: {
         type: String,
-        enum: ['ZERO_GENERATION', 'SUDDEN_DROP', 'ERRATIC_FLUCTUATION', 'PERFORMANCE_DEGRADATION'],
+        enum: [
+            'ZERO_GENERATION',
+            'SUDDEN_DROP',
+            'ERRATIC_FLUCTUATION',
+            'PERFORMANCE_DEGRADATION',
+            'INVERTER_OFFLINE',
+            'PANEL_SHADING',
+            'GRID_INSTABILITY',
+            'TEMPERATURE_OVERHEAT'
+        ],
         required: true
     },
     severity: {

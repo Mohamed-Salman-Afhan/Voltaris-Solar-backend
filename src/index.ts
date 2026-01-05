@@ -13,6 +13,9 @@ import cors from "cors";
 import webhooksRouter from "./api/webhooks";
 import { clerkMiddleware } from "@clerk/express";
 import usersRouter from "./api/users";
+import invoiceRouter from "./api/invoice";
+import paymentRouter from "./api/payment";
+import { handleStripeWebhook } from "./application/payment";
 
 const server = express();
 server.use(cors({ origin: "http://localhost:5173" }));
@@ -20,6 +23,7 @@ server.use(cors({ origin: "http://localhost:5173" }));
 server.use(loggerMiddleware);
 
 server.use("/api/webhooks", webhooksRouter);
+server.post("/api/stripe/webhook", express.raw({ type: "application/json" }), handleStripeWebhook);
 
 server.use(clerkMiddleware());
 
@@ -31,6 +35,8 @@ server.use("/api/users", usersRouter);
 server.use("/api/weather", weatherRouter);
 server.use("/api/capacity-factor", capacityFactorRouter);
 server.use("/api/anomalies", anomalyRouter);
+server.use("/api/invoices", invoiceRouter);
+server.use("/api/payments", paymentRouter);
 
 server.use(globalErrorHandler);
 

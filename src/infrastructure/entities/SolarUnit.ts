@@ -1,5 +1,21 @@
 import mongoose from "mongoose";
 
+export interface ISolarUnit extends mongoose.Document {
+  userId?: mongoose.Types.ObjectId;
+  serialNumber: string;
+  installationDate: Date;
+  capacity: number;
+  status: "ACTIVE" | "INACTIVE" | "MAINTENANCE";
+  location?: {
+    latitude: number;
+    longitude: number;
+  };
+  city?: string;
+  country?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 const solarUnitSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
@@ -27,6 +43,8 @@ const solarUnitSchema = new mongoose.Schema({
     latitude: Number,
     longitude: Number,
   },
-});
+  city: { type: String },
+  country: { type: String },
+}, { timestamps: true });
 
-export const SolarUnit = mongoose.model("SolarUnit", solarUnitSchema);
+export const SolarUnit = mongoose.model<ISolarUnit>("SolarUnit", solarUnitSchema);

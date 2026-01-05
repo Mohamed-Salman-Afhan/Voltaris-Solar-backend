@@ -9,6 +9,8 @@ interface WeatherResponse {
     shortwave_radiation: number;
     impact_level: "Optimal" | "Degraded" | "Poor";
     timestamp: Date;
+    city?: string;
+    country?: string;
 }
 
 export const getWeatherForUnit = async (
@@ -43,6 +45,8 @@ export const getWeatherForUnit = async (
             shortwave_radiation: cachedWeather.shortwave_radiation!,
             impact_level: cachedWeather.impact_level as "Optimal" | "Degraded" | "Poor",
             timestamp: cachedWeather.timestamp,
+            city: (solarUnit as any).city,
+            country: (solarUnit as any).country,
         };
     }
 
@@ -98,6 +102,8 @@ export const getWeatherForUnit = async (
             shortwave_radiation: newWeather.shortwave_radiation!,
             impact_level: newWeather.impact_level as "Optimal" | "Degraded" | "Poor",
             timestamp: newWeather.timestamp,
+            city: (solarUnit as any).city,
+            country: (solarUnit as any).country,
         };
 
     } catch (error) {

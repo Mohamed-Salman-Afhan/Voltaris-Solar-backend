@@ -7,7 +7,7 @@ const userSchema = new mongoose.Schema({
   lastName: {
     type: String,
   },
-  role:{
+  role: {
     type: String,
     enum: ["admin", "staff"],
   },
@@ -22,6 +22,9 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
+  },
+  imageUrl: {
+    type: String,
   },
 });
 

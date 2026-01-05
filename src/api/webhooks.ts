@@ -32,6 +32,7 @@ webhooksRouter.post(
           lastName: evt.data.last_name,
           email: evt.data.email_addresses[0].email_address,
           clerkUserId: id,
+          imageUrl: evt.data.image_url,
         });
       }
 

@@ -15,5 +15,17 @@ export const initializeScheduler = () => {
     }
   });
 
+  // Run monthly on the 1st at 1:00 AM
+  cron.schedule("0 1 1 * *", async () => {
+    console.log(`[${new Date().toISOString()}] Starting monthly invoice generation...`);
+    try {
+      const { generateMonthlyInvoices } = await import("../application/background/generate-invoices");
+      await generateMonthlyInvoices();
+      console.log(`[${new Date().toISOString()}] Monthly invoice generation completed successfully`);
+    } catch (error) {
+      console.error(`[${new Date().toISOString()}] Monthly invoice generation failed:`, error);
+    }
+  });
+
   console.log(`[Scheduler] Energy generation records sync scheduled for: ${schedule}`);
 };

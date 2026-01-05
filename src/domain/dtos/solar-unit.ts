@@ -9,6 +9,8 @@ export const CreateSolarUnitDto = z.object({
     latitude: z.number(),
     longitude: z.number(),
   }).optional(),
+  city: z.string().optional(),
+  country: z.string().optional(),
 });
 
 export const UpdateSolarUnitDto = z.object({
@@ -21,6 +23,8 @@ export const UpdateSolarUnitDto = z.object({
     latitude: z.number(),
     longitude: z.number(),
   }).optional(),
+  city: z.string().optional(),
+  country: z.string().optional(),
 });
 
 export const GetAllEnergyGenerationRecordsQueryDto = z.object({
