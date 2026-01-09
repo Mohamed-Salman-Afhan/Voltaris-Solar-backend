@@ -2,8 +2,8 @@ import cron from 'node-cron';
 import { syncEnergyGenerationRecords } from '../application/background/sync-energy-generation-records';
 
 export const initializeScheduler = () => {
-  // Run daily at 00:00 (midnight) - cron expression: '0 0 * * *'
-  const schedule = process.env.SYNC_CRON_SCHEDULE || '0 0 * * *';
+  // Run hourly on the hour
+  const schedule = process.env.SYNC_CRON_SCHEDULE || '0 * * * *';
 
   cron.schedule(schedule, async () => {
     console.log(`[${new Date().toISOString()}] Starting daily energy generation records sync...`);
@@ -13,6 +13,8 @@ export const initializeScheduler = () => {
     } catch (error) {
       console.error(`[${new Date().toISOString()}] Daily sync failed:`, error);
     }
+  }, {
+    timezone: "Asia/Colombo"
   });
 
   // Run monthly on the 1st at 1:00 AM
@@ -25,6 +27,8 @@ export const initializeScheduler = () => {
     } catch (error) {
       console.error(`[${new Date().toISOString()}] Monthly invoice generation failed:`, error);
     }
+  }, {
+    timezone: "Asia/Colombo"
   });
 
   console.log(`[Scheduler] Energy generation records sync scheduled for: ${schedule}`);

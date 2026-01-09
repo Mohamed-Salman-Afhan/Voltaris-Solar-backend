@@ -16,6 +16,8 @@ import usersRouter from "./api/users";
 import invoiceRouter from "./api/invoice";
 import paymentRouter from "./api/payment";
 import { handleStripeWebhook } from "./application/payment";
+import analyticsRouter from "./api/routes/analytics.routes";
+import adminInvoiceRouter from "./api/routes/admin-invoice.routes";
 
 const server = express();
 server.use(cors({ origin: "http://localhost:5173" }));
@@ -37,6 +39,8 @@ server.use("/api/capacity-factor", capacityFactorRouter);
 server.use("/api/anomalies", anomalyRouter);
 server.use("/api/invoices", invoiceRouter);
 server.use("/api/payments", paymentRouter);
+server.use("/api/analytics", analyticsRouter);
+server.use("/api/admin/invoices", adminInvoiceRouter);
 
 server.use(globalErrorHandler);
 

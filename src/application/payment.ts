@@ -54,6 +54,20 @@ export const getSessionStatus = async (req: Request, res: Response, next: any) =
 
         const session = await stripe.checkout.sessions.retrieve(session_id);
 
+        // Fallback: If Stripe says paid, ensure DB is paid (Lazy Update)
+        if (session.payment_status === "paid" && session.metadata?.invoiceId) {
+            const invoiceId = session.metadata.invoiceId;
+            // Optimistically update without waiting to speed up UI
+            Invoice.findById(invoiceId).then(async (inv) => {
+                if (inv && inv.paymentStatus !== "PAID") {
+                    console.log(`[SessionStatus] Lazy update for Invoice ${invoiceId} to PAID`);
+                    inv.paymentStatus = "PAID";
+                    inv.paidAt = new Date();
+                    await inv.save();
+                }
+            }).catch(err => console.error("[SessionStatus] Lazy update error:", err));
+        }
+
         res.json({
             status: session.status,
             paymentStatus: session.payment_status,

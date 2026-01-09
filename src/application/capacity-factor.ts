@@ -31,7 +31,7 @@ export const getCapacityFactorStats = async (
     const resultData: CapacityFactorStat[] = [];
     const endDate = startOfDay(new Date()); // Today 00:00:00
 
-    for (let i = days; i > 0; i--) {
+    for (let i = days; i >= 0; i--) {
         const date = subDays(endDate, i);
         const dateStr = format(date, "yyyy-MM-dd");
 

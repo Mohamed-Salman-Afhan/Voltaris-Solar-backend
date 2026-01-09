@@ -16,10 +16,10 @@ export const DataAPIEnergyGenerationRecordDto = z.object({
  * Synchronizes energy generation records from the data API
  * Fetches latest records and merges new data with existing records
  */
-export const syncEnergyGenerationRecords = async () => {
+export const syncEnergyGenerationRecords = async (specificSolarUnitId?: string) => {
     try {
-
-        const solarUnits = await SolarUnit.find();
+        const query = specificSolarUnitId ? { _id: specificSolarUnitId } : {};
+        const solarUnits = await SolarUnit.find(query);
 
         for (const solarUnit of solarUnits) {
 
