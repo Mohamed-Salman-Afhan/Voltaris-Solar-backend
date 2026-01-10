@@ -8,6 +8,9 @@ const RATE_PER_KWH = 0.05;
 export const getAdminInvoices = async (req: Request, res: Response) => {
     try {
         const { status, userId, days } = req.query;
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 15;
+        const skip = (page - 1) * limit;
 
         let matchStage: any = {};
         if (status) matchStage.paymentStatus = status;
@@ -20,7 +23,7 @@ export const getAdminInvoices = async (req: Request, res: Response) => {
             matchStage.createdAt = { $gte: date };
         }
 
-        // 1. Calculate Stats (Revenue, Pending, Overdue)
+        // 1. Calculate Stats (Revenue, Pending, Overdue) - Run on ALL matching docs
         const statsAggregation = await Invoice.aggregate([
             { $match: matchStage },
             {
@@ -47,12 +50,15 @@ export const getAdminInvoices = async (req: Request, res: Response) => {
 
         const stats = statsAggregation.length > 0 ? statsAggregation[0] : { totalRevenue: 0, totalPending: 0, totalFailed: 0 };
 
-        // 2. Fetch Invoices with Details
-        // We calculate 'amount' dynamically here too
+        // 2. Get Total Count for Pagination
+        const countResult = await Invoice.countDocuments(matchStage);
+
+        // 3. Fetch Invoices with Pagination & Details
         const invoices = await Invoice.aggregate([
             { $match: matchStage },
             { $sort: { createdAt: -1 } },
-            { $limit: 100 }, // Cap at 100 for now, add pagination later if needed
+            { $skip: skip },
+            { $limit: limit },
             {
                 $lookup: {
                     from: "users",
@@ -84,12 +90,13 @@ export const getAdminInvoices = async (req: Request, res: Response) => {
                     "user.lastName": 1,
                     "user.email": 1,
                     "solarUnit.serialNumber": 1,
-                    "solarUnit.city": 1
+                    "solarUnit.city": 1,
+                    paidAt: 1
                 }
             }
         ]);
 
-        res.status(200).json({ stats, invoices });
+        res.status(200).json({ stats, invoices, total: countResult, page, limit, totalPages: Math.ceil(countResult / limit) });
 
     } catch (error) {
         console.error("Error fetching admin invoices:", error);
