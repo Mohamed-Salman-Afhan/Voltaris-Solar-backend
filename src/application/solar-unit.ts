@@ -18,8 +18,29 @@ export const getAllSolarUnits = async (
   next: NextFunction
 ) => {
   try {
-    const solarUnits = await SolarUnit.find();
-    res.status(200).json(solarUnits);
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const status = req.query.status as string; // 'ACTIVE', 'INACTIVE', 'MAINTENANCE' or undefined
+
+    const skip = (page - 1) * limit;
+
+    const query: any = {};
+    if (status && status !== "ALL") {
+      query.status = status;
+    }
+
+    const total = await SolarUnit.countDocuments(query);
+    const solarUnits = await SolarUnit.find(query)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    res.status(200).json({
+      units: solarUnits,
+      totalPages: Math.ceil(total / limit),
+      currentPage: page,
+      totalUnits: total
+    });
   } catch (error) {
     next(error);
   }
