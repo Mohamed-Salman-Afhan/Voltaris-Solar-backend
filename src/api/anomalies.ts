@@ -32,19 +32,30 @@ router.get('/unit/:unitId', async (req, res, next) => {
 router.get('/admin', async (req, res, next) => {
     try {
         const { status, type, severity } = req.query;
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 10;
+        const skip = (page - 1) * limit;
 
         const query: any = {};
-        if (status) query.status = status;
-        if (type) query.anomalyType = type;
-        if (severity) query.severity = severity;
+        if (status && status !== 'ALL') query.status = status;
+        if (type && type !== 'ALL') query.anomalyType = type;
+        if (severity && severity !== 'ALL') query.severity = severity;
 
+        const total = await Anomaly.countDocuments(query);
         const anomalies = await Anomaly.find(query)
             .populate('solarUnitId', 'serialNumber')
-            .sort({ detectionTimestamp: -1 });
+            .sort({ detectionTimestamp: -1 })
+            .skip(skip)
+            .limit(limit);
 
         res.json({
             success: true,
-            data: anomalies
+            data: anomalies,
+            meta: {
+                totalPages: Math.ceil(total / limit),
+                currentPage: page,
+                total: total
+            }
         });
     } catch (error) {
         next(error);
