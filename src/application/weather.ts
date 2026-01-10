@@ -59,6 +59,21 @@ export const getWeatherForUnit = async (
     try {
         const response = await fetch(apiUrl);
         if (!response.ok) {
+            // Check for Rate Limit (429)
+            if (response.status === 429) {
+                console.warn(`[Weather] Rate limit exceeded for ${solarUnitId}. Using mock data.`);
+                // Return Mock Data
+                return {
+                    temperature: 22,
+                    cloudcover: 10,
+                    windspeed: 5.5,
+                    shortwave_radiation: 600,
+                    impact_level: "Optimal",
+                    timestamp: new Date(),
+                    city: (solarUnit as any).city || "Unknown",
+                    country: (solarUnit as any).country || "Unknown",
+                };
+            }
             const errorText = await response.text();
             throw new Error(`Open-Meteo API error: ${response.status} ${response.statusText} - ${errorText}`);
         }
