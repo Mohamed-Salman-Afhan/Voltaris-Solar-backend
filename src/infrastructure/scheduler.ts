@@ -5,6 +5,12 @@ export const initializeScheduler = () => {
   // Run hourly on the hour
   const schedule = process.env.SYNC_CRON_SCHEDULE || '0 * * * *';
 
+  // 1. Run sync immediately on startup (to catch any backfilled data)
+  console.log(`[Scheduler] Triggering immediate startup sync...`);
+  syncEnergyGenerationRecords()
+    .then(() => console.log(`[Scheduler] Startup sync completed.`))
+    .catch((err) => console.error(`[Scheduler] Startup sync failed:`, err));
+
   cron.schedule(schedule, async () => {
     console.log(`[${new Date().toISOString()}] Starting daily energy generation records sync...`);
     try {
