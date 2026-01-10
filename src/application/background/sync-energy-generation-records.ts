@@ -22,48 +22,62 @@ export const syncEnergyGenerationRecords = async (specificSolarUnitId?: string) 
         const solarUnits = await SolarUnit.find(query);
 
         for (const solarUnit of solarUnits) {
+            let hasMoreData = true;
+            let batchCount = 0;
+            const BATCH_LIMIT = 1000; // Must match Data API limit
 
-            // Get latest synced timestamp to only fetch new data
-            const lastSyncedRecord = await EnergyGenerationRecord
-                .findOne({ solarUnitId: solarUnit._id })
-                .sort({ timestamp: -1 });
+            while (hasMoreData) {
+                // Get latest synced timestamp (refreshed on every loop iteration)
+                const lastSyncedRecord = await EnergyGenerationRecord
+                    .findOne({ solarUnitId: solarUnit._id })
+                    .sort({ timestamp: -1 });
 
-            // Build URL with sinceTimestamp query parameter
-            const dataApiUrl = process.env.DATA_API_URL || "http://localhost:8001";
-            const baseUrl = `${dataApiUrl}/api/energy-generation-records/solar-unit/${solarUnit.serialNumber}`;
-            const url = new URL(baseUrl);
+                // Build URL
+                const dataApiUrl = process.env.DATA_API_URL || "http://localhost:8001";
+                const url = new URL(`${dataApiUrl}/api/energy-generation-records/solar-unit/${solarUnit.serialNumber}`);
 
-            if (lastSyncedRecord?.timestamp) {
-                url.searchParams.append('sinceTimestamp', lastSyncedRecord.timestamp.toISOString());
-            }
+                if (lastSyncedRecord?.timestamp) {
+                    url.searchParams.append('sinceTimestamp', lastSyncedRecord.timestamp.toISOString());
+                }
 
-            // Fetch latest records from data API with server-side filtering
-            const dataAPIResponse = await fetch(url.toString());
-            if (!dataAPIResponse.ok) {
-                throw new Error("Failed to fetch energy generation records from data API");
-            }
+                // Fetch latest records from data API
+                const dataAPIResponse = await fetch(url.toString());
+                if (!dataAPIResponse.ok) {
+                    console.warn(`Failed to fetch energy records for ${solarUnit.serialNumber}: ${dataAPIResponse.statusText}`);
+                    hasMoreData = false; // Stop loop on error
+                    break;
+                }
 
-            const newRecords = DataAPIEnergyGenerationRecordDto
-                .array()
-                .parse(await dataAPIResponse.json());
+                const newRecords = DataAPIEnergyGenerationRecordDto
+                    .array()
+                    .parse(await dataAPIResponse.json());
 
-            if (newRecords.length > 0) {
-                // Transform API records to match schema
-                const recordsToInsert = newRecords.map(record => ({
-                    solarUnitId: solarUnit._id,
-                    energyGenerated: record.energyGenerated,
-                    timestamp: new Date(record.timestamp),
-                    intervalHours: record.intervalHours,
-                }));
+                if (newRecords.length > 0) {
+                    // Transform API records to match schema
+                    const recordsToInsert = newRecords.map(record => ({
+                        solarUnitId: solarUnit._id,
+                        energyGenerated: record.energyGenerated,
+                        timestamp: new Date(record.timestamp),
+                        intervalHours: record.intervalHours,
+                    }));
 
-                await EnergyGenerationRecord.insertMany(recordsToInsert);
-                console.log(`Synced ${recordsToInsert.length} new energy generation records`);
+                    await EnergyGenerationRecord.insertMany(recordsToInsert);
 
-                // Trigger Anomaly Detection (Requirement 5.2)
-                await AnomalyDetectionService.analyzeRecords(recordsToInsert);
-            }
-            else {
-                console.log("No new records to sync");
+                    batchCount++;
+                    console.log(`[Sync] Batch ${batchCount}: Synced ${recordsToInsert.length} records for ${solarUnit.serialNumber}`);
+
+                    // Trigger Anomaly Detection
+                    await AnomalyDetectionService.analyzeRecords(recordsToInsert);
+
+                    // If we received fewer records than the limit, we are caught up
+                    if (newRecords.length < BATCH_LIMIT) {
+                        hasMoreData = false;
+                    }
+                    // Otherwise, loop again immediately to get the next 1000
+                } else {
+                    console.log(`[Sync] No new records for ${solarUnit.serialNumber}`);
+                    hasMoreData = false;
+                }
             }
         }
     } catch (error) {
