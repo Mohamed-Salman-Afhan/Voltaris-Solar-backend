@@ -3,10 +3,11 @@
     "sourceMap": true,
     "outDir": "./dist",
     "strict": true,
-    "lib": [
-      "esnext"
-    ],
+    "lib": ["esnext"],
     "esModuleInterop": true,
     "skipLibCheck": true
   },
+  "ts-node": {
+    "files": true
+  }
 }
