@@ -21,11 +21,13 @@ export const getWeatherForUnit = async (
         throw new NotFoundError("Solar Unit not found");
     }
 
-    // Check if location is configured
+    // Check if location is configured (strict check)
     if (
         !solarUnit.location ||
-        solarUnit.location.latitude === undefined ||
-        solarUnit.location.longitude === undefined
+        typeof solarUnit.location.latitude !== 'number' ||
+        typeof solarUnit.location.longitude !== 'number' ||
+        isNaN(solarUnit.location.latitude) ||
+        isNaN(solarUnit.location.longitude)
     ) {
         throw new Error("Solar unit location not configured");
     }
@@ -51,14 +53,14 @@ export const getWeatherForUnit = async (
     }
 
     // Fetch from Open-Meteo
-    // https://api.open-meteo.com/v1/forecast?latitude=52.52&longitude=13.41&current=temperature_2m,wind_speed_10m,cloud_cover,shortwave_radiation
     const { latitude, longitude } = solarUnit.location;
     const apiUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,cloud_cover,wind_speed_10m,shortwave_radiation`;
 
     try {
         const response = await fetch(apiUrl);
         if (!response.ok) {
-            throw new Error(`Open-Meteo API error: ${response.statusText}`);
+            const errorText = await response.text();
+            throw new Error(`Open-Meteo API error: ${response.status} ${response.statusText} - ${errorText}`);
         }
         const data = await response.json() as any;
         const current = data.current;

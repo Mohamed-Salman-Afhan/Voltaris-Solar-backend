@@ -14,8 +14,10 @@ weatherRouter.get("/:unit_id", async (req, res) => {
             res.status(404).json({ success: false, error: error.message });
         } else if (error instanceof Error && error.message === "Solar unit location not configured") {
             res.status(400).json({ success: false, error: error.message });
+        } else if (error instanceof Error && error.message === "Weather data unavailable") {
+            res.status(503).json({ success: false, error: "Weather service unavailable" });
         } else {
-            console.error(error);
+            console.error("Internal Weather API Error:", error);
             res.status(500).json({ success: false, error: "Internal Server Error" });
         }
     }
