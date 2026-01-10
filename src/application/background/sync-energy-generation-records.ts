@@ -29,7 +29,8 @@ export const syncEnergyGenerationRecords = async (specificSolarUnitId?: string) 
                 .sort({ timestamp: -1 });
 
             // Build URL with sinceTimestamp query parameter
-            const baseUrl = `http://localhost:8001/api/energy-generation-records/solar-unit/${solarUnit.serialNumber}`;
+            const dataApiUrl = process.env.DATA_API_URL || "http://localhost:8001";
+            const baseUrl = `${dataApiUrl}/api/energy-generation-records/solar-unit/${solarUnit.serialNumber}`;
             const url = new URL(baseUrl);
 
             if (lastSyncedRecord?.timestamp) {
