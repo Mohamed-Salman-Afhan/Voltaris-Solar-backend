@@ -38,16 +38,21 @@ export const syncMiddleware = async (
         }
 
         // Fetch latest records from data API
-        const dataAPIResponse = await fetch(
-            `http://localhost:8001/api/energy-generation-records/solar-unit/${solarUnit.serialNumber}`
-        );
+        const dataApiUrl = process.env.DATA_API_URL || "http://localhost:8001";
+        const url = `${dataApiUrl}/api/energy-generation-records/solar-unit/${solarUnit.serialNumber}`;
+
+        let dataAPIResponse;
+        try {
+            dataAPIResponse = await fetch(url);
+        } catch (error) {
+            console.error(`[SyncMiddleware] Failed to connect to Data API at ${url}`, error);
+            // Verify if non-critical: currently we treat sync failure as non-critical for dashboard loading
+            return next();
+        }
+
         if (!dataAPIResponse.ok) {
-            const respText = await dataAPIResponse.text().catch(() => "<unreadable response body>");
-            console.warn(
-                `Data API returned non-OK response: ${dataAPIResponse.status} ${dataAPIResponse.statusText} - ${respText}`
-            );
-            // Don't fail the whole request if the data API is unavailable;
-            // just continue so the client still gets the solar unit data.
+            const respText = await dataAPIResponse.text().catch(() => "<unreadable>");
+            console.warn(`[SyncMiddleware] Data API returned error: ${dataAPIResponse.status} - ${respText}`);
             return next();
         }
 
