@@ -61,7 +61,7 @@ export const getAdminInvoices = async (req: Request, res: Response) => {
                     as: "user"
                 }
             },
-            { $unwind: "$user" },
+            { $unwind: { path: "$user", preserveNullAndEmptyArrays: true } },
             {
                 $lookup: {
                     from: "solarunits",
@@ -70,7 +70,7 @@ export const getAdminInvoices = async (req: Request, res: Response) => {
                     as: "solarUnit"
                 }
             },
-            { $unwind: "$solarUnit" },
+            { $unwind: { path: "$solarUnit", preserveNullAndEmptyArrays: true } },
             {
                 $project: {
                     _id: 1,
