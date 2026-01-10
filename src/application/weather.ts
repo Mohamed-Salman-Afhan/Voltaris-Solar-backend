@@ -118,6 +118,8 @@ export const getWeatherForUnit = async (
                 shortwave_radiation: lastCached.shortwave_radiation!,
                 impact_level: lastCached.impact_level as "Optimal" | "Degraded" | "Poor",
                 timestamp: lastCached.timestamp,
+                city: (solarUnit as any).city,
+                country: (solarUnit as any).country,
             };
         }
         throw new Error("Weather data unavailable");
