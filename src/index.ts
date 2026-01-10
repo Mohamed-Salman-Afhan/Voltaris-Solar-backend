@@ -22,6 +22,11 @@ import adminInvoiceRouter from "./api/routes/admin-invoice.routes";
 const server = express();
 server.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:5173" }));
 
+// Health Check Endpoint
+server.get("/health", (req, res) => {
+    res.status(200).send("OK");
+});
+
 server.use(loggerMiddleware);
 
 server.use("/api/webhooks", webhooksRouter);
