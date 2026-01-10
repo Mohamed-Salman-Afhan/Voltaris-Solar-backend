@@ -20,7 +20,7 @@ import analyticsRouter from "./api/routes/analytics.routes";
 import adminInvoiceRouter from "./api/routes/admin-invoice.routes";
 
 const server = express();
-server.use(cors({ origin: "http://localhost:5173" }));
+server.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:5173" }));
 
 server.use(loggerMiddleware);
 
