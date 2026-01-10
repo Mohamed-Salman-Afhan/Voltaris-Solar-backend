@@ -104,15 +104,25 @@ export const getSolarUnitForUser = async (
   try {
     const auth = getAuth(req);
     const clerkUserId = auth.userId;
+    console.log(`[getSolarUnitForUser] Request for Clerk User ID: ${clerkUserId}`);
+
+    // DEBUG: Check connection
+    console.log(`[getSolarUnitForUser] Mongoose State: ${require("mongoose").connection.readyState}`);
 
     const user = await User.findOne({ clerkUserId });
+    console.log(`[getSolarUnitForUser] Found User: ${user ? user._id : "NULL"}`);
+
     if (!user) {
+      console.log(`[getSolarUnitForUser] Throwing NotFoundError`);
       throw new NotFoundError("User not found");
     }
 
     const solarUnits = await SolarUnit.find({ userId: user._id });
+    console.log(`[getSolarUnitForUser] Found ${solarUnits.length} Solar Units`);
+
     res.status(200).json(solarUnits);
   } catch (error) {
+    console.error("[getSolarUnitForUser] CRITICAL ERROR:", error);
     next(error);
   }
 };
