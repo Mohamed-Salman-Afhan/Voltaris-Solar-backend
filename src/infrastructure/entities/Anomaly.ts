@@ -53,4 +53,7 @@ const AnomalySchema: Schema = new Schema({
     timestamps: true
 });
 
+// Optimize: "Check if we already evaluated this today" query in detectDegradation
+AnomalySchema.index({ solarUnitId: 1, anomalyType: 1, detectionTimestamp: -1 });
+
 export const Anomaly = mongoose.model<IAnomaly>('Anomaly', AnomalySchema);
