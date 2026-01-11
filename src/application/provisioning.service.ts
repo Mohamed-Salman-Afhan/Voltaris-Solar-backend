@@ -48,9 +48,10 @@ export class SolarUnitProvisioningService {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(solarUnit)
             });
+
             if (!response.ok) {
                 const errText = await response.text();
-                throw new Error(`Seed API failed (${response.status}): ${errText}`);
+                throw new Error(`Seed API failed (${response.status}) at ${DATA_API_URL}: ${errText.substring(0, 200)}`);
             }
         } catch (err) {
             console.error(`[Provisioning] Seed Error:`, err);
