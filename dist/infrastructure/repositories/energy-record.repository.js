@@ -96,6 +96,32 @@ var EnergyRecordRepository = /** @class */ (function () {
             });
         });
     };
+    EnergyRecordRepository.prototype.getAverageEnergyInRange = function (solarUnitId, startDate, endDate) {
+        return __awaiter(this, void 0, void 0, function () {
+            var result;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0: return [4 /*yield*/, EnergyGenerationRecord_1.EnergyGenerationRecord.aggregate([
+                            {
+                                $match: {
+                                    solarUnitId: new mongoose_1.default.Types.ObjectId(solarUnitId),
+                                    timestamp: { $gte: startDate, $lt: endDate }
+                                }
+                            },
+                            {
+                                $group: {
+                                    _id: null,
+                                    avgEnergy: { $avg: "$energyGenerated" }
+                                }
+                            }
+                        ])];
+                    case 1:
+                        result = _a.sent();
+                        return [2 /*return*/, result.length ? result[0].avgEnergy : 0];
+                }
+            });
+        });
+    };
     return EnergyRecordRepository;
 }());
 exports.EnergyRecordRepository = EnergyRecordRepository;

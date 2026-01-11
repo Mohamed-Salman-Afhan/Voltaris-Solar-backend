@@ -44,7 +44,7 @@ var webhooks_1 = require("@clerk/express/webhooks");
 var User_1 = require("../infrastructure/entities/User");
 var webhooksRouter = express_1.default.Router();
 webhooksRouter.post("/clerk", express_1.default.raw({ type: "application/json" }), function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var evt, id, eventType, id_1, user, id_2, user, id_3, err_1;
+    var evt, id, eventType, id_1, user, data, id_2, user, id_3, err_1;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -65,12 +65,13 @@ webhooksRouter.post("/clerk", express_1.default.raw({ type: "application/json" }
                     console.log("User already exists");
                     return [2 /*return*/];
                 }
+                data = evt.data;
                 return [4 /*yield*/, User_1.User.create({
-                        firstName: evt.data.first_name,
-                        lastName: evt.data.last_name,
-                        email: evt.data.email_addresses[0].email_address,
+                        firstName: data.first_name,
+                        lastName: data.last_name,
+                        email: data.email_addresses[0].email_address,
                         clerkUserId: id_1,
-                        imageUrl: evt.data.image_url,
+                        imageUrl: data.image_url,
                     })];
             case 3:
                 _a.sent();

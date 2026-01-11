@@ -38,7 +38,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolarUnitProvisioningService = void 0;
 var EnergyGenerationRecord_1 = require("../infrastructure/entities/EnergyGenerationRecord");
-var anomaly_detection_1 = require("./anomaly-detection");
+var anomaly_service_1 = require("./services/anomaly.service");
 var sync_energy_generation_records_1 = require("./background/sync-energy-generation-records");
 var generate_invoices_1 = require("./background/generate-invoices");
 var SolarUnitProvisioningService = /** @class */ (function () {
@@ -53,7 +53,7 @@ var SolarUnitProvisioningService = /** @class */ (function () {
      */
     SolarUnitProvisioningService.provisionUnit = function (solarUnit) {
         return __awaiter(this, void 0, void 0, function () {
-            var historyRecords;
+            var historyRecords, anomalyService;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
@@ -73,7 +73,8 @@ var SolarUnitProvisioningService = /** @class */ (function () {
                         historyRecords = _a.sent();
                         if (!(historyRecords.length > 0)) return [3 /*break*/, 5];
                         console.log("[Provisioning] Analyzing ".concat(historyRecords.length, " records..."));
-                        return [4 /*yield*/, anomaly_detection_1.AnomalyDetectionService.analyzeRecords(historyRecords)];
+                        anomalyService = new anomaly_service_1.AnomalyDetectionService();
+                        return [4 /*yield*/, anomalyService.analyzeRecords(historyRecords)];
                     case 4:
                         _a.sent();
                         return [3 /*break*/, 6];
@@ -114,7 +115,7 @@ var SolarUnitProvisioningService = /** @class */ (function () {
                         return [4 /*yield*/, response.text()];
                     case 3:
                         errText = _a.sent();
-                        throw new Error("Seed API failed (".concat(response.status, "): ").concat(errText));
+                        throw new Error("Seed API failed (".concat(response.status, ") at ").concat(DATA_API_URL, ": ").concat(errText.substring(0, 200)));
                     case 4: return [3 /*break*/, 6];
                     case 5:
                         err_1 = _a.sent();

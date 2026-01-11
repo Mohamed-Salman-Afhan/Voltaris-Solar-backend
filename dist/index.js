@@ -20,7 +20,7 @@ var express_2 = require("@clerk/express");
 var users_1 = __importDefault(require("./api/users"));
 var invoice_1 = __importDefault(require("./api/invoice"));
 var payment_1 = __importDefault(require("./api/payment"));
-var payment_2 = require("./application/payment");
+var payment_controller_1 = require("./api/controllers/payment.controller");
 var analytics_routes_1 = __importDefault(require("./api/routes/analytics.routes"));
 var admin_invoice_routes_1 = __importDefault(require("./api/routes/admin-invoice.routes"));
 var server = (0, express_1.default)();
@@ -31,7 +31,7 @@ server.get("/health", function (req, res) {
 });
 server.use(logger_middleware_1.loggerMiddleware);
 server.use("/api/webhooks", webhooks_1.default);
-server.post("/api/stripe/webhook", express_1.default.raw({ type: "application/json" }), payment_2.handleStripeWebhook);
+server.post("/api/stripe/webhook", express_1.default.raw({ type: "application/json" }), payment_controller_1.handleStripeWebhook);
 server.use((0, express_2.clerkMiddleware)());
 server.use(express_1.default.json());
 server.use("/api/solar-units", solar_unit_1.default);

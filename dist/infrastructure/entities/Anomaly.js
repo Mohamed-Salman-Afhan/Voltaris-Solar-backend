@@ -35,25 +35,17 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Anomaly = void 0;
 var mongoose_1 = __importStar(require("mongoose"));
+var constants_1 = require("../../domain/constants");
 var AnomalySchema = new mongoose_1.Schema({
     solarUnitId: { type: mongoose_1.Schema.Types.ObjectId, ref: 'SolarUnit', required: true },
     anomalyType: {
         type: String,
-        enum: [
-            'ZERO_GENERATION',
-            'SUDDEN_DROP',
-            'ERRATIC_FLUCTUATION',
-            'PERFORMANCE_DEGRADATION',
-            'INVERTER_OFFLINE',
-            'PANEL_SHADING',
-            'GRID_INSTABILITY',
-            'TEMPERATURE_OVERHEAT'
-        ],
+        enum: Object.values(constants_1.AnomalyType),
         required: true
     },
     severity: {
         type: String,
-        enum: ['CRITICAL', 'WARNING', 'INFO'],
+        enum: Object.values(constants_1.AnomalySeverity),
         required: true
     },
     detectionTimestamp: { type: Date, required: true },
@@ -65,8 +57,8 @@ var AnomalySchema = new mongoose_1.Schema({
     },
     status: {
         type: String,
-        enum: ['NEW', 'ACKNOWLEDGED', 'RESOLVED'],
-        default: 'NEW'
+        enum: Object.values(constants_1.AnomalyStatus),
+        default: constants_1.AnomalyStatus.NEW
     },
     resolutionNotes: { type: String }
 }, {

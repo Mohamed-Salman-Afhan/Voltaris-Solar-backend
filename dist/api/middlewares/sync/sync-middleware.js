@@ -56,7 +56,7 @@ exports.DataAPIEnergyGenerationRecordDto = zod_1.z.object({
  * Fetches latest records and merges new data with existing records
  */
 var syncMiddleware = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
-    var auth, user, solarUnit_1, dataApiUrl, url, dataAPIResponse, error_1, respText, latestEnergyGenerationRecords, _a, _b, lastSyncedRecord_1, newRecords, recordsToInsert, error_2;
+    var auth, user, solarUnit_1, rawUrl, dataApiUrl, url, dataAPIResponse, error_1, respText, latestEnergyGenerationRecords, _a, _b, lastSyncedRecord_1, newRecords, recordsToInsert, error_2;
     return __generator(this, function (_c) {
         switch (_c.label) {
             case 0:
@@ -74,7 +74,8 @@ var syncMiddleware = function (req, res, next) { return __awaiter(void 0, void 0
                 if (!solarUnit_1) {
                     throw new errors_1.NotFoundError("Solar unit not found");
                 }
-                dataApiUrl = process.env.DATA_API_URL || "http://localhost:8001";
+                rawUrl = process.env.DATA_API_URL || "http://localhost:8001";
+                dataApiUrl = rawUrl.replace(/\/$/, "");
                 url = "".concat(dataApiUrl, "/api/energy-generation-records/solar-unit/").concat(solarUnit_1.serialNumber);
                 dataAPIResponse = void 0;
                 _c.label = 3;

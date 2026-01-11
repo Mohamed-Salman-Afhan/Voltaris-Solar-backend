@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Invoice = void 0;
 var mongoose_1 = __importDefault(require("mongoose"));
+var constants_1 = require("../../domain/constants");
 var invoiceSchema = new mongoose_1.default.Schema({
     solarUnitId: {
         type: mongoose_1.default.Schema.Types.ObjectId,
@@ -30,8 +31,8 @@ var invoiceSchema = new mongoose_1.default.Schema({
     },
     paymentStatus: {
         type: String,
-        enum: ["PENDING", "PAID", "FAILED"],
-        default: "PENDING",
+        enum: Object.values(constants_1.PaymentStatus),
+        default: constants_1.PaymentStatus.PENDING,
     },
     paidAt: {
         type: Date,

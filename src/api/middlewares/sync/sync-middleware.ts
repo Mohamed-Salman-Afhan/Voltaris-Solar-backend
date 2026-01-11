@@ -38,7 +38,9 @@ export const syncMiddleware = async (
         }
 
         // Fetch latest records from data API
-        const dataApiUrl = process.env.DATA_API_URL || "http://localhost:8001";
+        // Fetch latest records from data API
+        const rawUrl = process.env.DATA_API_URL || "http://localhost:8001";
+        const dataApiUrl = rawUrl.replace(/\/$/, "");
         const url = `${dataApiUrl}/api/energy-generation-records/solar-unit/${solarUnit.serialNumber}`;
 
         let dataAPIResponse;

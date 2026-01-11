@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolarUnit = void 0;
 var mongoose_1 = __importDefault(require("mongoose"));
+var constants_1 = require("../../domain/constants");
 var solarUnitSchema = new mongoose_1.default.Schema({
     userId: {
         type: mongoose_1.default.Schema.Types.ObjectId,
@@ -26,7 +27,7 @@ var solarUnitSchema = new mongoose_1.default.Schema({
     status: {
         type: String,
         required: true,
-        enum: ["ACTIVE", "INACTIVE", "MAINTENANCE"],
+        enum: Object.values(constants_1.SolarUnitStatus),
     },
     location: {
         latitude: Number,

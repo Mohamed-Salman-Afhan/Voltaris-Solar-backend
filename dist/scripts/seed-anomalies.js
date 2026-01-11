@@ -41,14 +41,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var mongoose_1 = __importDefault(require("mongoose"));
 var db_1 = require("../infrastructure/db");
-var anomaly_detection_1 = require("../application/anomaly-detection");
+var anomaly_service_1 = require("../application/services/anomaly.service");
 var EnergyGenerationRecord_1 = require("../infrastructure/entities/EnergyGenerationRecord");
 var SolarUnit_1 = require("../infrastructure/entities/SolarUnit");
 var dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
 function run() {
     return __awaiter(this, void 0, void 0, function () {
-        var args, serialArg, serialNumber, unit, historyRecords, error_1;
+        var args, serialArg, serialNumber, unit, historyRecords, anomalyService, error_1;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -80,12 +80,9 @@ function run() {
                     historyRecords = _a.sent();
                     if (!(historyRecords.length > 0)) return [3 /*break*/, 5];
                     console.log("Analyzing ".concat(historyRecords.length, " historical records for anomalies..."));
-                    // This will detect "Instantaneous" anomalies like Zero Generation or Spikes
-                    // throughout the entire history.
-                    return [4 /*yield*/, anomaly_detection_1.AnomalyDetectionService.analyzeRecords(historyRecords)];
+                    anomalyService = new anomaly_service_1.AnomalyDetectionService();
+                    return [4 /*yield*/, anomalyService.analyzeRecords(historyRecords)];
                 case 4:
-                    // This will detect "Instantaneous" anomalies like Zero Generation or Spikes
-                    // throughout the entire history.
                     _a.sent();
                     console.log("Anomaly analysis complete.");
                     return [3 /*break*/, 6];

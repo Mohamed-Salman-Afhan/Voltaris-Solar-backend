@@ -1,15 +1,4 @@
 "use strict";
-var __assign = (this && this.__assign) || function () {
-    __assign = Object.assign || function(t) {
-        for (var s, i = 1, n = arguments.length; i < n; i++) {
-            s = arguments[i];
-            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
-                t[p] = s[p];
-        }
-        return t;
-    };
-    return __assign.apply(this, arguments);
-};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -46,40 +35,28 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-var express_1 = __importDefault(require("express"));
-var capacity_factor_1 = require("../application/capacity-factor");
-var custom_errors_1 = require("../domain/errors/custom-errors");
-var capacityFactorRouter = express_1.default.Router();
-capacityFactorRouter.get("/:unit_id", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var unit_id, days, result, error_1;
+exports.getAllUsers = void 0;
+var user_repository_1 = require("../../infrastructure/repositories/user.repository");
+var userRepository = new user_repository_1.UserRepository();
+var getAllUsers = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
+    var users, error_1;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
                 _a.trys.push([0, 2, , 3]);
-                unit_id = req.params.unit_id;
-                days = req.query.days ? parseInt(req.query.days) : 7;
-                return [4 /*yield*/, (0, capacity_factor_1.getCapacityFactorStats)(unit_id, days)];
+                return [4 /*yield*/, userRepository.findAll()];
             case 1:
-                result = _a.sent();
-                res.json(__assign({ success: true }, result));
+                users = _a.sent();
+                res.status(200).json(users);
                 return [3 /*break*/, 3];
             case 2:
                 error_1 = _a.sent();
-                if (error_1 instanceof custom_errors_1.NotFoundError) {
-                    res.status(404).json({ success: false, error: error_1.message });
-                }
-                else {
-                    console.error(error_1);
-                    res.status(500).json({ success: false, error: "Internal Server Error" });
-                }
+                next(error_1);
                 return [3 /*break*/, 3];
             case 3: return [2 /*return*/];
         }
     });
-}); });
-exports.default = capacityFactorRouter;
-//# sourceMappingURL=capacity-factor.js.map
+}); };
+exports.getAllUsers = getAllUsers;
+//# sourceMappingURL=user.controller.js.map

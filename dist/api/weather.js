@@ -41,7 +41,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var express_1 = __importDefault(require("express"));
 var weather_1 = require("../application/weather");
-var not_found_error_1 = require("./errors/not-found-error");
+var custom_errors_1 = require("../domain/errors/custom-errors");
 var weatherRouter = express_1.default.Router();
 weatherRouter.get("/:unit_id", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
     var unit_id, data, error_1;
@@ -57,7 +57,7 @@ weatherRouter.get("/:unit_id", function (req, res) { return __awaiter(void 0, vo
                 return [3 /*break*/, 3];
             case 2:
                 error_1 = _a.sent();
-                if (error_1 instanceof not_found_error_1.NotFoundError) {
+                if (error_1 instanceof custom_errors_1.NotFoundError) {
                     res.status(404).json({ success: false, error: error_1.message });
                 }
                 else if (error_1 instanceof Error && error_1.message === "Solar unit location not configured") {
@@ -89,7 +89,7 @@ weatherRouter.post("/refresh/:unit_id", function (req, res) { return __awaiter(v
                 return [3 /*break*/, 3];
             case 2:
                 error_2 = _a.sent();
-                if (error_2 instanceof not_found_error_1.NotFoundError) {
+                if (error_2 instanceof custom_errors_1.NotFoundError) {
                     res.status(404).json({ success: false, error: error_2.message });
                 }
                 else {

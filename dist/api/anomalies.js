@@ -42,7 +42,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.anomalyRouter = void 0;
 var express_1 = __importDefault(require("express"));
 var Anomaly_1 = require("../infrastructure/entities/Anomaly");
-var not_found_error_1 = require("./errors/not-found-error");
+var custom_errors_1 = require("../domain/errors/custom-errors");
 var zod_1 = require("zod");
 var router = express_1.default.Router();
 exports.anomalyRouter = router;
@@ -145,7 +145,7 @@ router.patch('/:anomalyId', function (req, res, next) { return __awaiter(void 0,
             case 1:
                 anomaly = _a.sent();
                 if (!anomaly) {
-                    throw new not_found_error_1.NotFoundError("Anomaly alert not found");
+                    throw new custom_errors_1.NotFoundError("Anomaly alert not found");
                 }
                 res.json({
                     success: true,

@@ -30,7 +30,8 @@ const processSolarUnit = async (solarUnit: any) => {
                 .sort({ timestamp: -1 });
 
             // Build URL
-            const dataApiUrl = process.env.DATA_API_URL || "http://localhost:8001";
+            const rawUrl = process.env.DATA_API_URL || "http://localhost:8001";
+            const dataApiUrl = rawUrl.replace(/\/$/, "");
             const url = new URL(`${dataApiUrl}/api/energy-generation-records/solar-unit/${solarUnit.serialNumber}`);
 
             if (lastSyncedRecord?.timestamp) {

@@ -45,6 +45,7 @@ var SolarUnit_1 = require("../../infrastructure/entities/SolarUnit");
 var EnergyGenerationRecord_1 = require("../../infrastructure/entities/EnergyGenerationRecord");
 var Invoice_1 = require("../../infrastructure/entities/Invoice");
 var mongoose_1 = __importDefault(require("mongoose"));
+var constants_1 = require("../../domain/constants");
 // Update signature to accept optional targetUnitId and return count
 var generateMonthlyInvoices = function (targetUnitId) { return __awaiter(void 0, void 0, void 0, function () {
     var query, activeUnits, createdCount, now, lastMonthRaw, globalTargetEnd, _i, activeUnits_1, unit, iteratorDate, currentMonthStart, periodStart, periodEnd, existingInvoice, records, totalEnergy, error_1;
@@ -52,7 +53,7 @@ var generateMonthlyInvoices = function (targetUnitId) { return __awaiter(void 0,
         switch (_a.label) {
             case 0:
                 console.log("Starting invoice generation (Retrospective & Monthly)".concat(targetUnitId ? " for ".concat(targetUnitId) : '', "..."));
-                query = { status: "ACTIVE" };
+                query = { status: constants_1.SolarUnitStatus.ACTIVE };
                 if (targetUnitId) { // Fixed: Ensure targetUnitId is used if provided
                     query._id = new mongoose_1.default.Types.ObjectId(targetUnitId);
                 }

@@ -49,7 +49,7 @@ exports.getCapacityFactorStats = void 0;
 var SolarUnit_1 = require("../infrastructure/entities/SolarUnit");
 var CapacityFactorRecord_1 = require("../infrastructure/entities/CapacityFactorRecord");
 var EnergyGenerationRecord_1 = require("../infrastructure/entities/EnergyGenerationRecord");
-var not_found_error_1 = require("../api/errors/not-found-error");
+var custom_errors_1 = require("../domain/errors/custom-errors");
 var date_fns_1 = require("date-fns");
 var DEFAULT_PEAK_SUN_HOURS = 5;
 var getCapacityFactorStats = function (solarUnitId_1) {
@@ -66,7 +66,7 @@ var getCapacityFactorStats = function (solarUnitId_1) {
                 case 1:
                     solarUnit = _a.sent();
                     if (!solarUnit) {
-                        throw new not_found_error_1.NotFoundError("Solar Unit not found");
+                        throw new custom_errors_1.NotFoundError("Solar Unit not found");
                     }
                     resultData = [];
                     endDate = (0, date_fns_1.startOfDay)(new Date());

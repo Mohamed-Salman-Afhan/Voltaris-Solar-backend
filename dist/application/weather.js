@@ -39,7 +39,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getWeatherForUnit = void 0;
 var SolarUnit_1 = require("../infrastructure/entities/SolarUnit");
 var WeatherData_1 = require("../infrastructure/entities/WeatherData");
-var not_found_error_1 = require("../api/errors/not-found-error");
+var custom_errors_1 = require("../domain/errors/custom-errors");
 var getWeatherForUnit = function (solarUnitId) { return __awaiter(void 0, void 0, void 0, function () {
     var solarUnit, tenMinutesAgo, cachedWeather, _a, latitude, longitude, apiUrl, response, errorText, data, current, temp, clouds, wind, radiation, impact, newWeather, error_1, lastCached;
     return __generator(this, function (_b) {
@@ -48,7 +48,7 @@ var getWeatherForUnit = function (solarUnitId) { return __awaiter(void 0, void 0
             case 1:
                 solarUnit = _b.sent();
                 if (!solarUnit) {
-                    throw new not_found_error_1.NotFoundError("Solar Unit not found");
+                    throw new custom_errors_1.NotFoundError("Solar Unit not found");
                 }
                 // Check if location is configured (strict check)
                 if (!solarUnit.location ||

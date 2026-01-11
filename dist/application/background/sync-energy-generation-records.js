@@ -40,7 +40,7 @@ exports.syncEnergyGenerationRecords = exports.DataAPIEnergyGenerationRecordDto =
 var zod_1 = require("zod");
 var EnergyGenerationRecord_1 = require("../../infrastructure/entities/EnergyGenerationRecord");
 var SolarUnit_1 = require("../../infrastructure/entities/SolarUnit");
-var anomaly_detection_1 = require("../anomaly-detection");
+var anomaly_service_1 = require("../services/anomaly.service");
 exports.DataAPIEnergyGenerationRecordDto = zod_1.z.object({
     _id: zod_1.z.string(),
     serialNumber: zod_1.z.string(),
@@ -54,7 +54,7 @@ exports.DataAPIEnergyGenerationRecordDto = zod_1.z.object({
  * Fetches latest records and merges new data with existing records
  */
 var processSolarUnit = function (solarUnit) { return __awaiter(void 0, void 0, void 0, function () {
-    var hasMoreData, batchCount, BATCH_LIMIT, lastSyncedRecord, dataApiUrl, url, dataAPIResponse, newRecords, _a, _b, recordsToInsert, error_1;
+    var hasMoreData, batchCount, BATCH_LIMIT, lastSyncedRecord, rawUrl, dataApiUrl, url, dataAPIResponse, newRecords, _a, _b, recordsToInsert, anomalyService, error_1;
     return __generator(this, function (_c) {
         switch (_c.label) {
             case 0:
@@ -70,7 +70,8 @@ var processSolarUnit = function (solarUnit) { return __awaiter(void 0, void 0, v
                         .sort({ timestamp: -1 })];
             case 2:
                 lastSyncedRecord = _c.sent();
-                dataApiUrl = process.env.DATA_API_URL || "http://localhost:8001";
+                rawUrl = process.env.DATA_API_URL || "http://localhost:8001";
+                dataApiUrl = rawUrl.replace(/\/$/, "");
                 url = new URL("".concat(dataApiUrl, "/api/energy-generation-records/solar-unit/").concat(solarUnit.serialNumber));
                 if (lastSyncedRecord === null || lastSyncedRecord === void 0 ? void 0 : lastSyncedRecord.timestamp) {
                     url.searchParams.append('sinceTimestamp', lastSyncedRecord.timestamp.toISOString());
@@ -101,10 +102,9 @@ var processSolarUnit = function (solarUnit) { return __awaiter(void 0, void 0, v
                 _c.sent();
                 batchCount++;
                 console.log("[Sync] Batch ".concat(batchCount, ": Synced ").concat(recordsToInsert.length, " records for ").concat(solarUnit.serialNumber));
-                // Trigger Anomaly Detection
-                return [4 /*yield*/, anomaly_detection_1.AnomalyDetectionService.analyzeRecords(recordsToInsert)];
+                anomalyService = new anomaly_service_1.AnomalyDetectionService();
+                return [4 /*yield*/, anomalyService.analyzeRecords(recordsToInsert)];
             case 6:
-                // Trigger Anomaly Detection
                 _c.sent();
                 // If we received fewer records than the limit, we are caught up
                 if (newRecords.length < BATCH_LIMIT) {
