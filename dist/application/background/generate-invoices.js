@@ -35,49 +35,66 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateMonthlyInvoices = void 0;
 var date_fns_1 = require("date-fns");
 var SolarUnit_1 = require("../../infrastructure/entities/SolarUnit");
 var EnergyGenerationRecord_1 = require("../../infrastructure/entities/EnergyGenerationRecord");
 var Invoice_1 = require("../../infrastructure/entities/Invoice");
-var generateMonthlyInvoices = function () { return __awaiter(void 0, void 0, void 0, function () {
-    var activeUnits, now, lastMonth, periodStart, periodEnd, createdCount, _i, activeUnits_1, unit, existingInvoice, records, totalEnergy, error_1;
+var mongoose_1 = __importDefault(require("mongoose"));
+// Update signature to accept optional targetUnitId and return count
+var generateMonthlyInvoices = function (targetUnitId) { return __awaiter(void 0, void 0, void 0, function () {
+    var query, activeUnits, createdCount, now, lastMonthRaw, globalTargetEnd, _i, activeUnits_1, unit, iteratorDate, currentMonthStart, periodStart, periodEnd, existingInvoice, records, totalEnergy, error_1;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
-                console.log("Starting monthly invoice generation...");
-                return [4 /*yield*/, SolarUnit_1.SolarUnit.find({ status: "ACTIVE" })];
+                console.log("Starting invoice generation (Retrospective & Monthly)".concat(targetUnitId ? " for ".concat(targetUnitId) : '', "..."));
+                query = { status: "ACTIVE" };
+                if (targetUnitId) { // Fixed: Ensure targetUnitId is used if provided
+                    query._id = new mongoose_1.default.Types.ObjectId(targetUnitId);
+                }
+                return [4 /*yield*/, SolarUnit_1.SolarUnit.find(query)];
             case 1:
                 activeUnits = _a.sent();
-                now = new Date();
-                lastMonth = (0, date_fns_1.subMonths)(now, 1);
-                periodStart = (0, date_fns_1.startOfMonth)(lastMonth);
-                periodEnd = (0, date_fns_1.endOfMonth)(lastMonth);
-                console.log("Generating invoices for period: ".concat(periodStart.toISOString(), " - ").concat(periodEnd.toISOString()));
                 createdCount = 0;
+                now = new Date();
+                lastMonthRaw = (0, date_fns_1.subMonths)(now, 1);
+                globalTargetEnd = (0, date_fns_1.endOfMonth)(lastMonthRaw);
                 _i = 0, activeUnits_1 = activeUnits;
                 _a.label = 2;
             case 2:
-                if (!(_i < activeUnits_1.length)) return [3 /*break*/, 9];
+                if (!(_i < activeUnits_1.length)) return [3 /*break*/, 12];
                 unit = activeUnits_1[_i];
                 _a.label = 3;
             case 3:
-                _a.trys.push([3, 7, , 8]);
+                _a.trys.push([3, 10, , 11]);
                 if (!unit.userId) {
-                    console.log("Unit ".concat(unit.serialNumber, " has no user assigned, skipping invoice."));
-                    return [3 /*break*/, 8];
+                    console.log("Unit ".concat(unit.serialNumber, " has no user assigned, skipping."));
+                    return [3 /*break*/, 11];
                 }
+                iteratorDate = unit.installationDate ? new Date(unit.installationDate) : (0, date_fns_1.startOfMonth)(lastMonthRaw);
+                _a.label = 4;
+            case 4:
+                if (!(iteratorDate <= globalTargetEnd)) return [3 /*break*/, 9];
+                currentMonthStart = (0, date_fns_1.startOfMonth)(iteratorDate);
+                periodStart = iteratorDate > currentMonthStart ? iteratorDate : currentMonthStart;
+                periodEnd = (0, date_fns_1.endOfMonth)(iteratorDate);
+                // Safety: Don't bill for future months (should be covered by while loop, but double check)
+                if (periodStart > globalTargetEnd)
+                    return [3 /*break*/, 9];
                 return [4 /*yield*/, Invoice_1.Invoice.findOne({
                         solarUnitId: unit._id,
-                        billingPeriodStart: periodStart,
-                        billingPeriodEnd: periodEnd,
+                        billingPeriodStart: { $gte: (0, date_fns_1.startOfMonth)(periodStart), $lte: (0, date_fns_1.endOfMonth)(periodEnd) }
                     })];
-            case 4:
+            case 5:
                 existingInvoice = _a.sent();
                 if (existingInvoice) {
-                    console.log("Invoice already exists for unit ".concat(unit.serialNumber, " for this period."));
-                    return [3 /*break*/, 8];
+                    // Invoice exists for this month, move to next month
+                    iteratorDate = (0, date_fns_1.addMonths)((0, date_fns_1.startOfMonth)(iteratorDate), 1);
+                    return [3 /*break*/, 4];
                 }
                 return [4 /*yield*/, EnergyGenerationRecord_1.EnergyGenerationRecord.aggregate([
                         {
@@ -93,13 +110,10 @@ var generateMonthlyInvoices = function () { return __awaiter(void 0, void 0, voi
                             },
                         },
                     ])];
-            case 5:
+            case 6:
                 records = _a.sent();
                 totalEnergy = records.length > 0 ? records[0].totalEnergy : 0;
-                if (totalEnergy <= 0) {
-                    console.log("No energy generated for unit ".concat(unit.serialNumber, ", skipping invoice."));
-                    return [3 /*break*/, 8];
-                }
+                if (!(totalEnergy > 0)) return [3 /*break*/, 8];
                 // 4. Create Invoice
                 return [4 /*yield*/, Invoice_1.Invoice.create({
                         solarUnitId: unit._id,
@@ -109,22 +123,28 @@ var generateMonthlyInvoices = function () { return __awaiter(void 0, void 0, voi
                         totalEnergyGenerated: totalEnergy,
                         paymentStatus: "PENDING",
                     })];
-            case 6:
+            case 7:
                 // 4. Create Invoice
                 _a.sent();
                 createdCount++;
-                console.log("Created invoice for unit ".concat(unit.serialNumber, ": ").concat(totalEnergy.toFixed(2), " kWh"));
-                return [3 /*break*/, 8];
-            case 7:
-                error_1 = _a.sent();
-                console.error("Error generating invoice for unit ".concat(unit.serialNumber, ":"), error_1);
-                return [3 /*break*/, 8];
+                console.log("[Invoice] Created for ".concat(unit.serialNumber, ": ").concat(periodStart.toISOString().slice(0, 10), " to ").concat(periodEnd.toISOString().slice(0, 10), " (").concat(totalEnergy.toFixed(2), " kWh)"));
+                _a.label = 8;
             case 8:
+                // Move iterator to the 1st of the NEXT month
+                // Use a safe increment logic
+                iteratorDate = (0, date_fns_1.addMonths)((0, date_fns_1.startOfMonth)(iteratorDate), 1);
+                return [3 /*break*/, 4];
+            case 9: return [3 /*break*/, 11];
+            case 10:
+                error_1 = _a.sent();
+                console.error("Error processing unit ".concat(unit.serialNumber, ":"), error_1);
+                return [3 /*break*/, 11];
+            case 11:
                 _i++;
                 return [3 /*break*/, 2];
-            case 9:
-                console.log("Invoice generation complete. Created ".concat(createdCount, " invoices."));
-                return [2 /*return*/];
+            case 12:
+                console.log("Invoice generation complete. Created ".concat(createdCount, " new invoices."));
+                return [2 /*return*/, createdCount];
         }
     });
 }); };

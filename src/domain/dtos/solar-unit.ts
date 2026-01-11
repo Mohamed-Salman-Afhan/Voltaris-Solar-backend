@@ -11,6 +11,7 @@ export const CreateSolarUnitDto = z.object({
   }).optional(),
   city: z.string().optional(),
   country: z.string().optional(),
+  userId: z.string().optional(),
 });
 
 export const UpdateSolarUnitDto = z.object({

@@ -41,16 +41,18 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var mongoose_1 = __importDefault(require("mongoose"));
 var db_1 = require("../infrastructure/db");
-var anomaly_service_1 = require("../domain/services/anomaly.service");
+var anomaly_detection_1 = require("../application/anomaly-detection");
+var EnergyGenerationRecord_1 = require("../infrastructure/entities/EnergyGenerationRecord");
+var SolarUnit_1 = require("../infrastructure/entities/SolarUnit");
 var dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
 function run() {
     return __awaiter(this, void 0, void 0, function () {
-        var args, serialArg, serialNumber, error_1;
+        var args, serialArg, serialNumber, unit, historyRecords, error_1;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    _a.trys.push([0, 3, 4, 6]);
+                    _a.trys.push([0, 7, 8, 10]);
                     return [4 /*yield*/, (0, db_1.connectDB)()];
                 case 1:
                     _a.sent();
@@ -66,20 +68,40 @@ function run() {
                         process.exit(1);
                     }
                     console.log("Starting anomaly seeding for ".concat(serialNumber, "..."));
-                    return [4 /*yield*/, anomaly_service_1.AnomalyService.seedAnomaliesForUnit(serialNumber)];
+                    return [4 /*yield*/, SolarUnit_1.SolarUnit.findOne({ serialNumber: serialNumber })];
                 case 2:
-                    _a.sent();
-                    console.log("Done.");
-                    return [3 /*break*/, 6];
+                    unit = _a.sent();
+                    if (!unit) {
+                        console.error("Solar Unit ".concat(serialNumber, " not found."));
+                        return [2 /*return*/];
+                    }
+                    return [4 /*yield*/, EnergyGenerationRecord_1.EnergyGenerationRecord.find({ solarUnitId: unit._id })];
                 case 3:
+                    historyRecords = _a.sent();
+                    if (!(historyRecords.length > 0)) return [3 /*break*/, 5];
+                    console.log("Analyzing ".concat(historyRecords.length, " historical records for anomalies..."));
+                    // This will detect "Instantaneous" anomalies like Zero Generation or Spikes
+                    // throughout the entire history.
+                    return [4 /*yield*/, anomaly_detection_1.AnomalyDetectionService.analyzeRecords(historyRecords)];
+                case 4:
+                    // This will detect "Instantaneous" anomalies like Zero Generation or Spikes
+                    // throughout the entire history.
+                    _a.sent();
+                    console.log("Anomaly analysis complete.");
+                    return [3 /*break*/, 6];
+                case 5:
+                    console.log("No energy records found for this unit. Run seed-history first.");
+                    _a.label = 6;
+                case 6: return [3 /*break*/, 10];
+                case 7:
                     error_1 = _a.sent();
                     console.error("Error seeding anomalies:", error_1);
-                    return [3 /*break*/, 6];
-                case 4: return [4 /*yield*/, mongoose_1.default.disconnect()];
-                case 5:
+                    return [3 /*break*/, 10];
+                case 8: return [4 /*yield*/, mongoose_1.default.disconnect()];
+                case 9:
                     _a.sent();
                     return [7 /*endfinally*/];
-                case 6: return [2 /*return*/];
+                case 10: return [2 /*return*/];
             }
         });
     });

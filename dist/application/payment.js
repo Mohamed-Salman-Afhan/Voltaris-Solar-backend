@@ -83,6 +83,7 @@ var createCheckoutSession = function (req, res, next) { return __awaiter(void 0,
                 return [3 /*break*/, 4];
             case 3:
                 error_1 = _a.sent();
+                console.error("Error creating checkout session:", error_1.message, error_1);
                 next(error_1);
                 return [3 /*break*/, 4];
             case 4: return [2 /*return*/];
@@ -91,18 +92,40 @@ var createCheckoutSession = function (req, res, next) { return __awaiter(void 0,
 }); };
 exports.createCheckoutSession = createCheckoutSession;
 var getSessionStatus = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
-    var session_id, session, error_2;
-    return __generator(this, function (_a) {
-        switch (_a.label) {
+    var session_id, session, invoiceId_1, error_2;
+    var _a;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
             case 0:
-                _a.trys.push([0, 2, , 3]);
+                _b.trys.push([0, 2, , 3]);
                 session_id = req.query.session_id;
                 if (!session_id || typeof session_id !== 'string') {
                     return [2 /*return*/, res.status(400).json({ message: "Session ID is required" })];
                 }
                 return [4 /*yield*/, stripe.checkout.sessions.retrieve(session_id)];
             case 1:
-                session = _a.sent();
+                session = _b.sent();
+                // Fallback: If Stripe says paid, ensure DB is paid (Lazy Update)
+                if (session.payment_status === "paid" && ((_a = session.metadata) === null || _a === void 0 ? void 0 : _a.invoiceId)) {
+                    invoiceId_1 = session.metadata.invoiceId;
+                    // Optimistically update without waiting to speed up UI
+                    Invoice_1.Invoice.findById(invoiceId_1).then(function (inv) { return __awaiter(void 0, void 0, void 0, function () {
+                        return __generator(this, function (_a) {
+                            switch (_a.label) {
+                                case 0:
+                                    if (!(inv && inv.paymentStatus !== "PAID")) return [3 /*break*/, 2];
+                                    console.log("[SessionStatus] Lazy update for Invoice ".concat(invoiceId_1, " to PAID"));
+                                    inv.paymentStatus = "PAID";
+                                    inv.paidAt = new Date();
+                                    return [4 /*yield*/, inv.save()];
+                                case 1:
+                                    _a.sent();
+                                    _a.label = 2;
+                                case 2: return [2 /*return*/];
+                            }
+                        });
+                    }); }).catch(function (err) { return console.error("[SessionStatus] Lazy update error:", err); });
+                }
                 res.json({
                     status: session.status,
                     paymentStatus: session.payment_status,
@@ -110,7 +133,7 @@ var getSessionStatus = function (req, res, next) { return __awaiter(void 0, void
                 });
                 return [3 /*break*/, 3];
             case 2:
-                error_2 = _a.sent();
+                error_2 = _b.sent();
                 next(error_2);
                 return [3 /*break*/, 3];
             case 3: return [2 /*return*/];

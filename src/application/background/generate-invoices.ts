@@ -50,7 +50,7 @@ export const generateMonthlyInvoices = async (targetUnitId?: string): Promise<nu
                 const existingInvoice = await Invoice.findOne({
                     solarUnitId: unit._id,
                     billingPeriodStart: { $gte: startOfMonth(periodStart), $lte: endOfMonth(periodEnd) }
-                });
+                } as any);
 
                 if (existingInvoice) {
                     // Invoice exists for this month, move to next month

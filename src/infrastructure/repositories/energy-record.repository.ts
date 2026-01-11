@@ -49,4 +49,10 @@ export class EnergyRecordRepository {
 
         return EnergyGenerationRecord.aggregate(pipeline);
     }
+    async updateOwner(solarUnitId: string, newUserId: string) {
+        return EnergyGenerationRecord.updateMany(
+            { solarUnitId },
+            { $set: { userId: newUserId } }
+        );
+    }
 }

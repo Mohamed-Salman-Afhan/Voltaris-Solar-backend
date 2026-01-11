@@ -88,18 +88,21 @@ router.get("/", authentication_middleware_1.authenticationMiddleware, function (
                 return [4 /*yield*/, Promise.resolve().then(function () { return __importStar(require("../infrastructure/entities/User")); })];
             case 1:
                 User = (_a.sent()).User;
-                return [4 /*yield*/, User.findOne({ clerkId: userId })];
+                console.log("[InvoiceAPI] Lookng for user with clerkUserId: ".concat(userId));
+                return [4 /*yield*/, User.findOne({ clerkUserId: userId })];
             case 2:
                 user = _a.sent();
                 if (!user) {
-                    // If user not found in our DB, return empty or error
+                    console.log("[InvoiceAPI] User not found for clerkUserId: ".concat(userId));
                     return [2 /*return*/, res.json([])];
                 }
+                console.log("[InvoiceAPI] Found user: ".concat(user._id));
                 return [4 /*yield*/, Invoice_1.Invoice.find({ userId: user._id })
                         .sort({ createdAt: -1 })
                         .populate("solarUnitId", "serialNumber name status")];
             case 3:
                 invoices = _a.sent();
+                console.log("[InvoiceAPI] Found ".concat(invoices.length, " invoices for user ").concat(user._id));
                 res.json(invoices);
                 return [3 /*break*/, 5];
             case 4:

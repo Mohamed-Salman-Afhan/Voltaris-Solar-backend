@@ -26,5 +26,8 @@ var energyGenerationRecordSchema = new mongoose_1.default.Schema({
         max: 24,
     },
 });
+// Optimize queries for:
+// 1. Sync Job: Finding the last synced record for a unit (solarUnitId + timestamp desc)
+energyGenerationRecordSchema.index({ solarUnitId: 1, timestamp: -1 }, { unique: true });
 exports.EnergyGenerationRecord = mongoose_1.default.model("EnergyGenerationRecord", energyGenerationRecordSchema);
 //# sourceMappingURL=EnergyGenerationRecord.js.map

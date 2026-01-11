@@ -7,7 +7,7 @@ import {
   deleteSolarUnit,
   createSolarUnitValidator,
   getSolarUnitForUser,
-} from "../application/solar-unit";
+} from "./controllers/solar-unit.controller";
 import { authenticationMiddleware } from "./middlewares/authentication-middleware";
 import { authorizationMiddleware } from "./middlewares/authorization-middleware";
 import { syncMiddleware } from "./middlewares/sync/sync-middleware";

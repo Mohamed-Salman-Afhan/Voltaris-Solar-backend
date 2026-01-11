@@ -13,6 +13,7 @@ exports.CreateSolarUnitDto = zod_1.z.object({
     }).optional(),
     city: zod_1.z.string().optional(),
     country: zod_1.z.string().optional(),
+    userId: zod_1.z.string().optional(),
 });
 exports.UpdateSolarUnitDto = zod_1.z.object({
     serialNumber: zod_1.z.string().min(1),

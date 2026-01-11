@@ -1,0 +1,1 @@
+{"version":3,"file":"admin-invoice.routes.js","sourceRoot":"","sources":["../../../src/api/routes/admin-invoice.routes.ts"],"names":[],"mappings":";;;;;AAAA,oDAA8B;AAC9B,oFAA2E;AAC3E,sFAAoF;AACpF,oFAAkF,CAAC,+BAA+B;AAElH,IAAM,kBAAkB,GAAG,iBAAO,CAAC,MAAM,EAAE,CAAC;AAE5C,kBAAkB,CAAC,GAAG,CAAC,GAAG,EAAE,oDAAwB,EAAE,kDAAuB,EAAE,2CAAgB,CAAC,CAAC;AAEjG,kBAAe,kBAAkB,CAAC"}

@@ -41,7 +41,7 @@ var SolarUnit_1 = require("../infrastructure/entities/SolarUnit");
 var WeatherData_1 = require("../infrastructure/entities/WeatherData");
 var not_found_error_1 = require("../api/errors/not-found-error");
 var getWeatherForUnit = function (solarUnitId) { return __awaiter(void 0, void 0, void 0, function () {
-    var solarUnit, tenMinutesAgo, cachedWeather, _a, latitude, longitude, apiUrl, response, data, current, temp, clouds, wind, radiation, impact, newWeather, error_1, lastCached;
+    var solarUnit, tenMinutesAgo, cachedWeather, _a, latitude, longitude, apiUrl, response, errorText, data, current, temp, clouds, wind, radiation, impact, newWeather, error_1, lastCached;
     return __generator(this, function (_b) {
         switch (_b.label) {
             case 0: return [4 /*yield*/, SolarUnit_1.SolarUnit.findById(solarUnitId)];
@@ -50,10 +50,12 @@ var getWeatherForUnit = function (solarUnitId) { return __awaiter(void 0, void 0
                 if (!solarUnit) {
                     throw new not_found_error_1.NotFoundError("Solar Unit not found");
                 }
-                // Check if location is configured
+                // Check if location is configured (strict check)
                 if (!solarUnit.location ||
-                    solarUnit.location.latitude === undefined ||
-                    solarUnit.location.longitude === undefined) {
+                    typeof solarUnit.location.latitude !== 'number' ||
+                    typeof solarUnit.location.longitude !== 'number' ||
+                    isNaN(solarUnit.location.latitude) ||
+                    isNaN(solarUnit.location.longitude)) {
                     throw new Error("Solar unit location not configured");
                 }
                 tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
@@ -79,15 +81,32 @@ var getWeatherForUnit = function (solarUnitId) { return __awaiter(void 0, void 0
                 apiUrl = "https://api.open-meteo.com/v1/forecast?latitude=".concat(latitude, "&longitude=").concat(longitude, "&current=temperature_2m,cloud_cover,wind_speed_10m,shortwave_radiation");
                 _b.label = 3;
             case 3:
-                _b.trys.push([3, 7, , 9]);
+                _b.trys.push([3, 9, , 11]);
                 return [4 /*yield*/, fetch(apiUrl)];
             case 4:
                 response = _b.sent();
-                if (!response.ok) {
-                    throw new Error("Open-Meteo API error: ".concat(response.statusText));
+                if (!!response.ok) return [3 /*break*/, 6];
+                // Check for Rate Limit (429)
+                if (response.status === 429) {
+                    console.warn("[Weather] Rate limit exceeded for ".concat(solarUnitId, ". Using mock data."));
+                    // Return Mock Data
+                    return [2 /*return*/, {
+                            temperature: 22,
+                            cloudcover: 10,
+                            windspeed: 5.5,
+                            shortwave_radiation: 600,
+                            impact_level: "Optimal",
+                            timestamp: new Date(),
+                            city: solarUnit.city || "Unknown",
+                            country: solarUnit.country || "Unknown",
+                        }];
                 }
-                return [4 /*yield*/, response.json()];
+                return [4 /*yield*/, response.text()];
             case 5:
+                errorText = _b.sent();
+                throw new Error("Open-Meteo API error: ".concat(response.status, " ").concat(response.statusText, " - ").concat(errorText));
+            case 6: return [4 /*yield*/, response.json()];
+            case 7:
                 data = _b.sent();
                 current = data.current;
                 temp = current.temperature_2m;
@@ -118,7 +137,7 @@ var getWeatherForUnit = function (solarUnitId) { return __awaiter(void 0, void 0
                         shortwave_radiation: radiation,
                         impact_level: impact,
                     })];
-            case 6:
+            case 8:
                 newWeather = _b.sent();
                 return [2 /*return*/, {
                         temperature: newWeather.temperature,
@@ -130,11 +149,11 @@ var getWeatherForUnit = function (solarUnitId) { return __awaiter(void 0, void 0
                         city: solarUnit.city,
                         country: solarUnit.country,
                     }];
-            case 7:
+            case 9:
                 error_1 = _b.sent();
                 console.error("Error fetching weather:", error_1);
                 return [4 /*yield*/, WeatherData_1.WeatherData.findOne({ solar_unit_id: solarUnitId }).sort({ timestamp: -1 })];
-            case 8:
+            case 10:
                 lastCached = _b.sent();
                 if (lastCached) {
                     return [2 /*return*/, {
@@ -144,10 +163,12 @@ var getWeatherForUnit = function (solarUnitId) { return __awaiter(void 0, void 0
                             shortwave_radiation: lastCached.shortwave_radiation,
                             impact_level: lastCached.impact_level,
                             timestamp: lastCached.timestamp,
+                            city: solarUnit.city,
+                            country: solarUnit.country,
                         }];
                 }
                 throw new Error("Weather data unavailable");
-            case 9: return [2 /*return*/];
+            case 11: return [2 /*return*/];
         }
     });
 }); };

@@ -73,7 +73,7 @@ var getCapacityFactorStats = function (solarUnitId_1) {
                     i = days;
                     _a.label = 2;
                 case 2:
-                    if (!(i > 0)) return [3 /*break*/, 8];
+                    if (!(i >= 0)) return [3 /*break*/, 8];
                     date = (0, date_fns_1.subDays)(endDate, i);
                     dateStr = (0, date_fns_1.format)(date, "yyyy-MM-dd");
                     return [4 /*yield*/, CapacityFactorRecord_1.CapacityFactorRecord.findOne({

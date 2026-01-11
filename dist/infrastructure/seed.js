@@ -82,10 +82,10 @@ function seed() {
                     return [4 /*yield*/, User_1.User.findOne({})];
                 case 6:
                     user = _a.sent();
-                    userId = null;
+                    userId = undefined;
                     if (user) {
                         console.log("Found user: ".concat(user.firstName, " ").concat(user.lastName, " (").concat(user._id, ")"));
-                        userId = user._id; // Pass objectId directly
+                        userId = user._id;
                     }
                     else {
                         console.log("No existing user found. Unit will be unassigned.");

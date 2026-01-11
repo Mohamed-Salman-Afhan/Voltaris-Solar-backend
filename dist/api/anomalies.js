@@ -80,34 +80,47 @@ router.get('/unit/:unitId', function (req, res, next) { return __awaiter(void 0,
 // GET /api/anomalies/admin
 // Get all anomalies (Admin view)
 router.get('/admin', function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
-    var _a, status, type, severity, query, anomalies, error_2;
+    var _a, status, type, severity, page, limit, skip, query, total, anomalies, error_2;
     return __generator(this, function (_b) {
         switch (_b.label) {
             case 0:
-                _b.trys.push([0, 2, , 3]);
+                _b.trys.push([0, 3, , 4]);
                 _a = req.query, status = _a.status, type = _a.type, severity = _a.severity;
+                page = parseInt(req.query.page) || 1;
+                limit = parseInt(req.query.limit) || 10;
+                skip = (page - 1) * limit;
                 query = {};
-                if (status)
+                if (status && status !== 'ALL')
                     query.status = status;
-                if (type)
+                if (type && type !== 'ALL')
                     query.anomalyType = type;
-                if (severity)
+                if (severity && severity !== 'ALL')
                     query.severity = severity;
+                return [4 /*yield*/, Anomaly_1.Anomaly.countDocuments(query)];
+            case 1:
+                total = _b.sent();
                 return [4 /*yield*/, Anomaly_1.Anomaly.find(query)
                         .populate('solarUnitId', 'serialNumber')
-                        .sort({ detectionTimestamp: -1 })];
-            case 1:
+                        .sort({ detectionTimestamp: -1 })
+                        .skip(skip)
+                        .limit(limit)];
+            case 2:
                 anomalies = _b.sent();
                 res.json({
                     success: true,
-                    data: anomalies
+                    data: anomalies,
+                    meta: {
+                        totalPages: Math.ceil(total / limit),
+                        currentPage: page,
+                        total: total
+                    }
                 });
-                return [3 /*break*/, 3];
-            case 2:
+                return [3 /*break*/, 4];
+            case 3:
                 error_2 = _b.sent();
                 next(error_2);
-                return [3 /*break*/, 3];
-            case 3: return [2 /*return*/];
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
         }
     });
 }); });

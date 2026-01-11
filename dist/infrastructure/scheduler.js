@@ -76,8 +76,13 @@ exports.initializeScheduler = void 0;
 var node_cron_1 = __importDefault(require("node-cron"));
 var sync_energy_generation_records_1 = require("../application/background/sync-energy-generation-records");
 var initializeScheduler = function () {
-    // Run daily at 00:00 (midnight) - cron expression: '0 0 * * *'
-    var schedule = process.env.SYNC_CRON_SCHEDULE || '0 0 * * *';
+    // Run hourly on the hour
+    var schedule = process.env.SYNC_CRON_SCHEDULE || '0 * * * *';
+    // 1. Run sync immediately on startup (to catch any backfilled data)
+    console.log("[Scheduler] Triggering immediate startup sync...");
+    (0, sync_energy_generation_records_1.syncEnergyGenerationRecords)()
+        .then(function () { return console.log("[Scheduler] Startup sync completed."); })
+        .catch(function (err) { return console.error("[Scheduler] Startup sync failed:", err); });
     node_cron_1.default.schedule(schedule, function () { return __awaiter(void 0, void 0, void 0, function () {
         var error_1;
         return __generator(this, function (_a) {
@@ -99,7 +104,9 @@ var initializeScheduler = function () {
                 case 4: return [2 /*return*/];
             }
         });
-    }); });
+    }); }, {
+        timezone: "Asia/Colombo"
+    });
     // Run monthly on the 1st at 1:00 AM
     node_cron_1.default.schedule("0 1 1 * *", function () { return __awaiter(void 0, void 0, void 0, function () {
         var generateMonthlyInvoices, error_2;
@@ -125,7 +132,9 @@ var initializeScheduler = function () {
                 case 5: return [2 /*return*/];
             }
         });
-    }); });
+    }); }, {
+        timezone: "Asia/Colombo"
+    });
     console.log("[Scheduler] Energy generation records sync scheduled for: ".concat(schedule));
 };
 exports.initializeScheduler = initializeScheduler;

@@ -21,8 +21,14 @@ var users_1 = __importDefault(require("./api/users"));
 var invoice_1 = __importDefault(require("./api/invoice"));
 var payment_1 = __importDefault(require("./api/payment"));
 var payment_2 = require("./application/payment");
+var analytics_routes_1 = __importDefault(require("./api/routes/analytics.routes"));
+var admin_invoice_routes_1 = __importDefault(require("./api/routes/admin-invoice.routes"));
 var server = (0, express_1.default)();
-server.use((0, cors_1.default)({ origin: "http://localhost:5173" }));
+server.use((0, cors_1.default)({ origin: process.env.FRONTEND_URL || "http://localhost:5173" }));
+// Health Check Endpoint
+server.get("/health", function (req, res) {
+    res.status(200).send("OK");
+});
 server.use(logger_middleware_1.loggerMiddleware);
 server.use("/api/webhooks", webhooks_1.default);
 server.post("/api/stripe/webhook", express_1.default.raw({ type: "application/json" }), payment_2.handleStripeWebhook);
@@ -36,6 +42,8 @@ server.use("/api/capacity-factor", capacity_factor_1.default);
 server.use("/api/anomalies", anomalies_1.anomalyRouter);
 server.use("/api/invoices", invoice_1.default);
 server.use("/api/payments", payment_1.default);
+server.use("/api/analytics", analytics_routes_1.default);
+server.use("/api/admin/invoices", admin_invoice_routes_1.default);
 server.use(global_error_handling_middleware_1.globalErrorHandler);
 (0, db_1.connectDB)();
 (0, scheduler_1.initializeScheduler)();
