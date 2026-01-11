@@ -1,11 +1,12 @@
 import mongoose from "mongoose";
+import { SolarUnitStatus } from "../../domain/constants";
 
 export interface ISolarUnit extends mongoose.Document {
   userId?: mongoose.Types.ObjectId;
   serialNumber: string;
   installationDate: Date;
   capacity: number;
-  status: "ACTIVE" | "INACTIVE" | "MAINTENANCE";
+  status: SolarUnitStatus;
   location?: {
     latitude: number;
     longitude: number;
@@ -37,7 +38,7 @@ const solarUnitSchema = new mongoose.Schema({
   status: {
     type: String,
     required: true,
-    enum: ["ACTIVE", "INACTIVE", "MAINTENANCE"],
+    enum: Object.values(SolarUnitStatus),
   },
   location: {
     latitude: Number,

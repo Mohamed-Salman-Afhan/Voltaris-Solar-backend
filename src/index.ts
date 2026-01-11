@@ -15,7 +15,7 @@ import { clerkMiddleware } from "@clerk/express";
 import usersRouter from "./api/users";
 import invoiceRouter from "./api/invoice";
 import paymentRouter from "./api/payment";
-import { handleStripeWebhook } from "./application/payment";
+import { handleStripeWebhook } from "./api/controllers/payment.controller";
 import analyticsRouter from "./api/routes/analytics.routes";
 import adminInvoiceRouter from "./api/routes/admin-invoice.routes";
 

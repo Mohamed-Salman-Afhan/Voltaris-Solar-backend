@@ -1,6 +1,6 @@
 import { SolarUnit } from "../infrastructure/entities/SolarUnit";
 import { WeatherData } from "../infrastructure/entities/WeatherData";
-import { NotFoundError } from "../api/errors/not-found-error";
+import { NotFoundError } from "../domain/errors/custom-errors";
 
 interface WeatherResponse {
     temperature: number;

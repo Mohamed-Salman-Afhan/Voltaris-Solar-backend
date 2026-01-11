@@ -1,9 +1,10 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { AnomalyType, AnomalySeverity, AnomalyStatus } from '../../domain/constants';
 
 export interface IAnomaly extends Document {
     solarUnitId: mongoose.Types.ObjectId;
-    anomalyType: 'ZERO_GENERATION' | 'SUDDEN_DROP' | 'ERRATIC_FLUCTUATION' | 'PERFORMANCE_DEGRADATION' | 'INVERTER_OFFLINE' | 'PANEL_SHADING' | 'GRID_INSTABILITY' | 'TEMPERATURE_OVERHEAT';
-    severity: 'CRITICAL' | 'WARNING' | 'INFO';
+    anomalyType: AnomalyType;
+    severity: AnomalySeverity;
     detectionTimestamp: Date;      // When the issue occurred
     description: string;           // e.g., "Zero output detected at peak hour"
     metrics: {
@@ -11,7 +12,7 @@ export interface IAnomaly extends Document {
         actualValue: number;         // e.g., 0 kWh
         deviationPercent?: number;   // e.g., 100%
     };
-    status: 'NEW' | 'ACKNOWLEDGED' | 'RESOLVED';
+    status: AnomalyStatus;
     resolutionNotes?: string;
 }
 
@@ -19,21 +20,12 @@ const AnomalySchema: Schema = new Schema({
     solarUnitId: { type: Schema.Types.ObjectId, ref: 'SolarUnit', required: true },
     anomalyType: {
         type: String,
-        enum: [
-            'ZERO_GENERATION',
-            'SUDDEN_DROP',
-            'ERRATIC_FLUCTUATION',
-            'PERFORMANCE_DEGRADATION',
-            'INVERTER_OFFLINE',
-            'PANEL_SHADING',
-            'GRID_INSTABILITY',
-            'TEMPERATURE_OVERHEAT'
-        ],
+        enum: Object.values(AnomalyType),
         required: true
     },
     severity: {
         type: String,
-        enum: ['CRITICAL', 'WARNING', 'INFO'],
+        enum: Object.values(AnomalySeverity),
         required: true
     },
     detectionTimestamp: { type: Date, required: true },
@@ -45,8 +37,8 @@ const AnomalySchema: Schema = new Schema({
     },
     status: {
         type: String,
-        enum: ['NEW', 'ACKNOWLEDGED', 'RESOLVED'],
-        default: 'NEW'
+        enum: Object.values(AnomalyStatus),
+        default: AnomalyStatus.NEW
     },
     resolutionNotes: { type: String }
 }, {

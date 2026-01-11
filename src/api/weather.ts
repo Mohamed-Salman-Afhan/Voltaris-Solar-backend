@@ -1,6 +1,6 @@
 import express from "express";
 import { getWeatherForUnit } from "../application/weather";
-import { NotFoundError } from "./errors/not-found-error";
+import { NotFoundError } from "../domain/errors/custom-errors";
 
 const weatherRouter = express.Router();
 

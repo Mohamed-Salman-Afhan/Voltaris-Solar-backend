@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { EnergyGenerationRecord } from "../../infrastructure/entities/EnergyGenerationRecord";
 import { SolarUnit } from "../../infrastructure/entities/SolarUnit";
-import { AnomalyDetectionService } from "../anomaly-detection";
+import { AnomalyDetectionService } from "../services/anomaly.service";
 
 export const DataAPIEnergyGenerationRecordDto = z.object({
     _id: z.string(),
@@ -64,7 +64,8 @@ const processSolarUnit = async (solarUnit: any) => {
                 console.log(`[Sync] Batch ${batchCount}: Synced ${recordsToInsert.length} records for ${solarUnit.serialNumber}`);
 
                 // Trigger Anomaly Detection
-                await AnomalyDetectionService.analyzeRecords(recordsToInsert);
+                const anomalyService = new AnomalyDetectionService();
+                await anomalyService.analyzeRecords(recordsToInsert);
 
                 // If we received fewer records than the limit, we are caught up
                 if (newRecords.length < BATCH_LIMIT) {

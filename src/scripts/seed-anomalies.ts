@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { connectDB } from "../infrastructure/db";
-import { AnomalyDetectionService } from "../application/anomaly-detection";
+import { AnomalyDetectionService } from "../application/services/anomaly.service";
 import { EnergyGenerationRecord } from "../infrastructure/entities/EnergyGenerationRecord";
 import { SolarUnit } from "../infrastructure/entities/SolarUnit";
 import dotenv from "dotenv";
@@ -40,7 +40,8 @@ async function run() {
             console.log(`Analyzing ${historyRecords.length} historical records for anomalies...`);
             // This will detect "Instantaneous" anomalies like Zero Generation or Spikes
             // throughout the entire history.
-            await AnomalyDetectionService.analyzeRecords(historyRecords);
+            const anomalyService = new AnomalyDetectionService();
+            await anomalyService.analyzeRecords(historyRecords);
             console.log("Anomaly analysis complete.");
         } else {
             console.log("No energy records found for this unit. Run seed-history first.");

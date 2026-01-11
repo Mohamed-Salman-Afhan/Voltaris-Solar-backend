@@ -1,7 +1,7 @@
 
 import { SolarUnit } from "../infrastructure/entities/SolarUnit";
 import { EnergyGenerationRecord } from "../infrastructure/entities/EnergyGenerationRecord";
-import { AnomalyDetectionService } from "./anomaly-detection";
+import { AnomalyDetectionService } from "./services/anomaly.service";
 import { syncEnergyGenerationRecords } from "./background/sync-energy-generation-records";
 import { generateMonthlyInvoices } from "./background/generate-invoices";
 
@@ -27,7 +27,8 @@ export class SolarUnitProvisioningService {
         const historyRecords = await EnergyGenerationRecord.find({ solarUnitId: solarUnit._id });
         if (historyRecords.length > 0) {
             console.log(`[Provisioning] Analyzing ${historyRecords.length} records...`);
-            await AnomalyDetectionService.analyzeRecords(historyRecords);
+            const anomalyService = new AnomalyDetectionService();
+            await anomalyService.analyzeRecords(historyRecords);
         } else {
             console.warn(`[Provisioning] No records found after sync for ${solarUnit.serialNumber}. Skipping analysis.`);
         }

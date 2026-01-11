@@ -1,7 +1,7 @@
 import { SolarUnit } from "../infrastructure/entities/SolarUnit";
 import { CapacityFactorRecord } from "../infrastructure/entities/CapacityFactorRecord";
 import { EnergyGenerationRecord } from "../infrastructure/entities/EnergyGenerationRecord";
-import { NotFoundError } from "../api/errors/not-found-error";
+import { NotFoundError } from "../domain/errors/custom-errors";
 import { startOfDay, subDays, format } from "date-fns";
 
 const DEFAULT_PEAK_SUN_HOURS = 5;

@@ -1,6 +1,6 @@
 import express from "express";
 import { getCapacityFactorStats } from "../application/capacity-factor";
-import { NotFoundError } from "./errors/not-found-error";
+import { NotFoundError } from "../domain/errors/custom-errors";
 
 const capacityFactorRouter = express.Router();
 

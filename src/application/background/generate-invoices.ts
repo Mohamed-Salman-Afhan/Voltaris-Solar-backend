@@ -3,13 +3,14 @@ import { SolarUnit } from "../../infrastructure/entities/SolarUnit";
 import { EnergyGenerationRecord } from "../../infrastructure/entities/EnergyGenerationRecord";
 import { Invoice } from "../../infrastructure/entities/Invoice";
 import mongoose from "mongoose";
+import { SolarUnitStatus } from "../../domain/constants";
 
 // Update signature to accept optional targetUnitId and return count
 export const generateMonthlyInvoices = async (targetUnitId?: string): Promise<number> => {
     console.log(`Starting invoice generation (Retrospective & Monthly)${targetUnitId ? ` for ${targetUnitId}` : ''}...`);
 
     // 1. Get active solar units (All or Specific)
-    const query = { status: "ACTIVE" } as any;
+    const query = { status: SolarUnitStatus.ACTIVE } as any;
     if (targetUnitId) { // Fixed: Ensure targetUnitId is used if provided
         query._id = new mongoose.Types.ObjectId(targetUnitId);
     }

@@ -27,12 +27,13 @@ webhooksRouter.post(
           console.log("User already exists");
           return;
         }
+        const data = evt.data as any;
         await User.create({
-          firstName: evt.data.first_name,
-          lastName: evt.data.last_name,
-          email: evt.data.email_addresses[0].email_address,
+          firstName: data.first_name,
+          lastName: data.last_name,
+          email: data.email_addresses[0].email_address,
           clerkUserId: id,
-          imageUrl: evt.data.image_url,
+          imageUrl: data.image_url,
         });
       }
 

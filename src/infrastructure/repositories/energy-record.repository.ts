@@ -55,4 +55,21 @@ export class EnergyRecordRepository {
             { $set: { userId: newUserId } }
         );
     }
+    async getAverageEnergyInRange(solarUnitId: string, startDate: Date, endDate: Date): Promise<number> {
+        const result = await EnergyGenerationRecord.aggregate([
+            {
+                $match: {
+                    solarUnitId: new mongoose.Types.ObjectId(solarUnitId),
+                    timestamp: { $gte: startDate, $lt: endDate }
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    avgEnergy: { $avg: "$energyGenerated" }
+                }
+            }
+        ]);
+        return result.length ? result[0].avgEnergy : 0;
+    }
 }

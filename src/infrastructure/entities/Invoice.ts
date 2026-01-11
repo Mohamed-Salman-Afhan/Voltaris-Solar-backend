@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { PaymentStatus } from "../../domain/constants";
 
 export interface IInvoice extends mongoose.Document {
     solarUnitId: mongoose.Types.ObjectId;
@@ -6,7 +7,7 @@ export interface IInvoice extends mongoose.Document {
     billingPeriodStart: Date;
     billingPeriodEnd: Date;
     totalEnergyGenerated: number;
-    paymentStatus: "PENDING" | "PAID" | "FAILED";
+    paymentStatus: PaymentStatus;
     paidAt?: Date;
     createdAt: Date;
     updatedAt: Date;
@@ -37,8 +38,8 @@ const invoiceSchema = new mongoose.Schema({
     },
     paymentStatus: {
         type: String,
-        enum: ["PENDING", "PAID", "FAILED"],
-        default: "PENDING",
+        enum: Object.values(PaymentStatus),
+        default: PaymentStatus.PENDING,
     },
     paidAt: {
         type: Date,

@@ -1,5 +1,5 @@
 import express from "express";
-import { createCheckoutSession, getSessionStatus } from "../application/payment";
+import { createCheckoutSession, getSessionStatus } from "./controllers/payment.controller";
 import { authenticationMiddleware } from "./middlewares/authentication-middleware";
 
 const router = express.Router();

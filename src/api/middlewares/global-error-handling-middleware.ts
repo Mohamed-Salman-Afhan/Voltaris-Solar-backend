@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from "express";
+import { AppError } from "../../domain/errors/custom-errors";
 
 export const globalErrorHandler = (
   err: Error,
@@ -6,19 +7,33 @@ export const globalErrorHandler = (
   res: Response,
   next: NextFunction
 ) => {
-  console.error(err);
-  if (err.name === "NotFoundError") {
-    return res.status(404).json({ message: err.message });
+  if (err instanceof AppError) {
+    return res.status(err.statusCode).json({
+      status: err.status,
+      message: err.message,
+    });
   }
 
+  // Handle Mongoose Validation Errors
   if (err.name === "ValidationError") {
-    return res.status(400).json({ message: err.message });
+    return res.status(400).json({
+      status: "fail",
+      message: err.message,
+    });
   }
 
-  if (err.name === "UnauthorizedError") {
-    return res.status(401).json({ message: err.message });
+  // Handle Mongoose Duplicate Key Errors
+  if ((err as any).code === 11000) {
+    const field = Object.keys((err as any).keyValue)[0];
+    return res.status(400).json({
+      status: "fail",
+      message: `Duplicate field value: ${field}. Please use another value!`,
+    });
   }
 
-  // Handle other errors
-  res.status(500).json({ message: "Internal server error" });
+  console.error("ERROR 💥", err);
+  return res.status(500).json({
+    status: "error",
+    message: "Internal server error",
+  });
 };

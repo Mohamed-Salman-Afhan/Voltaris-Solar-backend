@@ -1,6 +1,6 @@
 import express from 'express';
 import { Anomaly } from '../infrastructure/entities/Anomaly';
-import { NotFoundError } from './errors/not-found-error';
+import { NotFoundError } from "../domain/errors/custom-errors";
 import { z } from 'zod';
 
 const router = express.Router();
