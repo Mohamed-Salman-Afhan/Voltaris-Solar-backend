@@ -1,11 +1,11 @@
 import express from "express";
-import { getAllEnergyGenerationRecordsBySolarUnitId } from "../application/energy-generation-record";
+import { getEnergyStats } from "./controllers/energy.controller";
 import { authenticationMiddleware } from "./middlewares/authentication-middleware";
 
 const energyGenerationRecordRouter = express.Router();
 
 energyGenerationRecordRouter
   .route("/solar-unit/:id")
-  .get(authenticationMiddleware, getAllEnergyGenerationRecordsBySolarUnitId);
+  .get(authenticationMiddleware, getEnergyStats);
 
 export default energyGenerationRecordRouter;

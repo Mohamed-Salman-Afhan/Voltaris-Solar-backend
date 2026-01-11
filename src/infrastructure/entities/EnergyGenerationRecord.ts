@@ -24,7 +24,7 @@ const energyGenerationRecordSchema = new mongoose.Schema({
 
 // Optimize queries for:
 // 1. Sync Job: Finding the last synced record for a unit (solarUnitId + timestamp desc)
-energyGenerationRecordSchema.index({ solarUnitId: 1, timestamp: -1 });
+energyGenerationRecordSchema.index({ solarUnitId: 1, timestamp: -1 }, { unique: true });
 
 export const EnergyGenerationRecord = mongoose.model(
   "EnergyGenerationRecord",
