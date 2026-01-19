@@ -76,7 +76,13 @@ var processSolarUnit = function (solarUnit) { return __awaiter(void 0, void 0, v
                 if (lastSyncedRecord === null || lastSyncedRecord === void 0 ? void 0 : lastSyncedRecord.timestamp) {
                     url.searchParams.append('sinceTimestamp', lastSyncedRecord.timestamp.toISOString());
                 }
-                return [4 /*yield*/, fetch(url.toString())];
+                return [4 /*yield*/, fetch(url.toString(), {
+                        headers: {
+                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                            "Accept": "application/json",
+                            "Accept-Language": "en-US,en;q=0.9",
+                        }
+                    })];
             case 3:
                 dataAPIResponse = _c.sent();
                 if (!dataAPIResponse.ok) {
@@ -130,34 +136,41 @@ var processSolarUnit = function (solarUnit) { return __awaiter(void 0, void 0, v
  * Fetches latest records and merges new data with existing records
  */
 var syncEnergyGenerationRecords = function (specificSolarUnitId) { return __awaiter(void 0, void 0, void 0, function () {
-    var query, solarUnits, CHUNK_SIZE, i, chunk, error_2;
+    var query, solarUnits, _i, solarUnits_1, unit, error_2;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
-                _a.trys.push([0, 6, , 7]);
+                _a.trys.push([0, 7, , 8]);
                 query = specificSolarUnitId ? { _id: specificSolarUnitId } : {};
                 return [4 /*yield*/, SolarUnit_1.SolarUnit.find(query)];
             case 1:
                 solarUnits = _a.sent();
-                CHUNK_SIZE = 10;
-                i = 0;
+                // Process SEQUENTIALLY to avoid hitting Data API rate limits (429)
+                // especially on startup when syncing all units.
+                console.log("[Sync Job] Found ".concat(solarUnits.length, " solar units to sync."));
+                _i = 0, solarUnits_1 = solarUnits;
                 _a.label = 2;
             case 2:
-                if (!(i < solarUnits.length)) return [3 /*break*/, 5];
-                chunk = solarUnits.slice(i, i + CHUNK_SIZE);
-                return [4 /*yield*/, Promise.all(chunk.map(function (unit) { return processSolarUnit(unit); }))];
+                if (!(_i < solarUnits_1.length)) return [3 /*break*/, 6];
+                unit = solarUnits_1[_i];
+                return [4 /*yield*/, processSolarUnit(unit)];
             case 3:
                 _a.sent();
-                _a.label = 4;
+                // Add a small delay between units to be nice to the API
+                return [4 /*yield*/, new Promise(function (resolve) { return setTimeout(resolve, 2000); })];
             case 4:
-                i += CHUNK_SIZE;
+                // Add a small delay between units to be nice to the API
+                _a.sent();
+                _a.label = 5;
+            case 5:
+                _i++;
                 return [3 /*break*/, 2];
-            case 5: return [3 /*break*/, 7];
-            case 6:
+            case 6: return [3 /*break*/, 8];
+            case 7:
                 error_2 = _a.sent();
                 console.error("Sync Job error:", error_2);
-                return [3 /*break*/, 7];
-            case 7: return [2 /*return*/];
+                return [3 /*break*/, 8];
+            case 8: return [2 /*return*/];
         }
     });
 }); };

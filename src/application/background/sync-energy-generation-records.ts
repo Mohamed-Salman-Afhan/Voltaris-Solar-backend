@@ -39,7 +39,15 @@ const processSolarUnit = async (solarUnit: any) => {
             }
 
             // Fetch latest records from data API
-            const dataAPIResponse = await fetch(url.toString());
+            // Add Cloudflare bypass headers
+            const dataAPIResponse = await fetch(url.toString(), {
+                headers: {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                    "Accept": "application/json",
+                    "Accept-Language": "en-US,en;q=0.9",
+                }
+            });
+
             if (!dataAPIResponse.ok) {
                 console.warn(`Failed to fetch energy records for ${solarUnit.serialNumber}: ${dataAPIResponse.statusText}`);
                 hasMoreData = false; // Stop loop on error
@@ -92,11 +100,14 @@ export const syncEnergyGenerationRecords = async (specificSolarUnitId?: string) 
         const query = specificSolarUnitId ? { _id: specificSolarUnitId } : {};
         const solarUnits = await SolarUnit.find(query);
 
-        // Process in parallel chunks to improve performance
-        const CHUNK_SIZE = 10;
-        for (let i = 0; i < solarUnits.length; i += CHUNK_SIZE) {
-            const chunk = solarUnits.slice(i, i + CHUNK_SIZE);
-            await Promise.all(chunk.map(unit => processSolarUnit(unit)));
+        // Process SEQUENTIALLY to avoid hitting Data API rate limits (429)
+        // especially on startup when syncing all units.
+        console.log(`[Sync Job] Found ${solarUnits.length} solar units to sync.`);
+
+        for (const unit of solarUnits) {
+            await processSolarUnit(unit);
+            // Add a small delay between units to be nice to the API
+            await new Promise(resolve => setTimeout(resolve, 2000));
         }
 
     } catch (error) {
