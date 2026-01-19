@@ -5,6 +5,7 @@ import { Invoice } from "../../infrastructure/entities/Invoice";
 import { Anomaly } from "../../infrastructure/entities/Anomaly";
 import { CapacityFactorRecord } from "../../infrastructure/entities/CapacityFactorRecord";
 import mongoose from "mongoose";
+import { getCapacityFactorStats } from "../capacity-factor";
 
 export class AnalyticsService {
 
@@ -13,12 +14,20 @@ export class AnalyticsService {
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - days);
 
-        const [efficiency, weather, financials, anomalies] = await Promise.all([
-            this.getSystemEfficiencyData(solarUnitId, startDate, endDate),
+        const [efficiencyData, weather, financials, anomalies] = await Promise.all([
+            // Use the shared logic which includes self-healing
+            getCapacityFactorStats(solarUnitId, days),
             this.getWeatherCorrelationData(solarUnitId, startDate, endDate),
             this.getFinancialMetrics(solarUnitId, startDate, endDate),
             this.getAnomalyImpact(solarUnitId, startDate, endDate)
         ]);
+
+        // Map the shared response format to what the analytics frontend expects
+        const efficiency = efficiencyData.data.map(r => ({
+            date: new Date(r.date),
+            efficiency: r.capacity_factor,
+            production: r.actual_energy
+        }));
 
         return {
             efficiency,
@@ -28,19 +37,8 @@ export class AnalyticsService {
         };
     }
 
-    static async getSystemEfficiencyData(solarUnitId: string, startDate: Date, endDate: Date) {
-        // Fetch daily capacity factor records
-        const records = await CapacityFactorRecord.find({
-            solar_unit_id: solarUnitId,
-            date: { $gte: startDate, $lte: endDate }
-        }).sort({ date: 1 });
-
-        return records.map(r => ({
-            date: r.date,
-            efficiency: r.capacity_factor,
-            production: r.actual_energy
-        }));
-    }
+    // getSystemEfficiencyData is no longer needed as a standalone method doing raw queries
+    // or can be kept as a private helper if we really wanted to separate it, but inline is fine.
 
     static async getWeatherCorrelationData(solarUnitId: string, startDate: Date, endDate: Date) {
         // Aggregate energy and weather data by day

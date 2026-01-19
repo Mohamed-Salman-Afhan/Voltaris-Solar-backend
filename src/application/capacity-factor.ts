@@ -41,6 +41,24 @@ export const getCapacityFactorStats = async (
             date: date,
         });
 
+        // SELF-HEALING: If we have a cached "0" record, but we now have energy data (e.g. after a sync),
+        // we should discard the "0" record and re-calculate.
+        if (record && record.actual_energy === 0) {
+            const nextDay = new Date(date);
+            nextDay.setDate(date.getDate() + 1);
+
+            const hasFreshData = await EnergyGenerationRecord.exists({
+                solarUnitId: solarUnit._id,
+                timestamp: { $gte: date, $lt: nextDay },
+            });
+
+            if (hasFreshData) {
+                console.log(`[CapacityFactor] Found fresh data for ${dateStr} (Unit: ${solarUnitId}). Invalidating cached '0' record.`);
+                await CapacityFactorRecord.deleteOne({ _id: record._id });
+                record = null; // Force re-calculation
+            }
+        }
+
         if (!record) {
             // Calculate it
             // Aggregate energy for that day
