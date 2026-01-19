@@ -39,18 +39,48 @@ const processSolarUnit = async (solarUnit: any) => {
             }
 
             // Fetch latest records from data API
-            // Add Cloudflare bypass headers
-            const dataAPIResponse = await fetch(url.toString(), {
-                headers: {
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                    "Accept": "application/json",
-                    "Accept-Language": "en-US,en;q=0.9",
-                }
-            });
+            // Add Cloudflare bypass headers + Retry logic
+            let dataAPIResponse;
+            let retries = 0;
+            const MAX_RETRIES = 3;
+            let success = false;
 
-            if (!dataAPIResponse.ok) {
-                console.warn(`Failed to fetch energy records for ${solarUnit.serialNumber}: ${dataAPIResponse.statusText}`);
-                hasMoreData = false; // Stop loop on error
+            while (retries < MAX_RETRIES && !success) {
+                try {
+                    dataAPIResponse = await fetch(url.toString(), {
+                        headers: {
+                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                            "Accept": "application/json",
+                            "Accept-Language": "en-US,en;q=0.9",
+                        }
+                    });
+
+                    if (dataAPIResponse.status === 429) {
+                        retries++;
+                        const backoffTime = 30000 * retries; // 30s, 60s, 90s
+                        console.warn(`[Sync] Rate limited (429) for ${solarUnit.serialNumber}. Retrying in ${backoffTime / 1000}s... (Attempt ${retries}/${MAX_RETRIES})`);
+                        await new Promise(resolve => setTimeout(resolve, backoffTime));
+                        continue;
+                    }
+
+                    if (!dataAPIResponse.ok) {
+                        console.warn(`Failed to fetch energy records for ${solarUnit.serialNumber}: ${dataAPIResponse.statusText}`);
+                        hasMoreData = false; // Stop loop on non-retryable error
+                        break; // Break retry loop
+                    }
+
+                    success = true;
+
+                } catch (err) {
+                    console.error(`[Sync] Network error for ${solarUnit.serialNumber}:`, err);
+                    retries++;
+                    await new Promise(resolve => setTimeout(resolve, 5000)); // 5s wait on network error
+                }
+            }
+
+            if (!success || !dataAPIResponse) {
+                console.error(`[Sync] Failed to sync ${solarUnit.serialNumber} after ${MAX_RETRIES} attempts.`);
+                hasMoreData = false;
                 break;
             }
 
@@ -106,8 +136,8 @@ export const syncEnergyGenerationRecords = async (specificSolarUnitId?: string) 
 
         for (const unit of solarUnits) {
             await processSolarUnit(unit);
-            // Add a small delay between units to be nice to the API
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Increase delay to 10 seconds to avoid "sticky" rate limits
+            await new Promise(resolve => setTimeout(resolve, 10000));
         }
 
     } catch (error) {

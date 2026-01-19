@@ -54,17 +54,17 @@ exports.DataAPIEnergyGenerationRecordDto = zod_1.z.object({
  * Fetches latest records and merges new data with existing records
  */
 var processSolarUnit = function (solarUnit) { return __awaiter(void 0, void 0, void 0, function () {
-    var hasMoreData, batchCount, BATCH_LIMIT, lastSyncedRecord, rawUrl, dataApiUrl, url, dataAPIResponse, newRecords, _a, _b, recordsToInsert, anomalyService, error_1;
+    var hasMoreData, batchCount, BATCH_LIMIT, lastSyncedRecord, rawUrl, dataApiUrl, url, dataAPIResponse, retries, MAX_RETRIES, success, _loop_1, state_1, newRecords, _a, _b, recordsToInsert, anomalyService, error_1;
     return __generator(this, function (_c) {
         switch (_c.label) {
             case 0:
-                _c.trys.push([0, 10, , 11]);
+                _c.trys.push([0, 12, , 13]);
                 hasMoreData = true;
                 batchCount = 0;
                 BATCH_LIMIT = 1000;
                 _c.label = 1;
             case 1:
-                if (!hasMoreData) return [3 /*break*/, 9];
+                if (!hasMoreData) return [3 /*break*/, 11];
                 return [4 /*yield*/, EnergyGenerationRecord_1.EnergyGenerationRecord
                         .findOne({ solarUnitId: solarUnit._id })
                         .sort({ timestamp: -1 })];
@@ -76,27 +76,75 @@ var processSolarUnit = function (solarUnit) { return __awaiter(void 0, void 0, v
                 if (lastSyncedRecord === null || lastSyncedRecord === void 0 ? void 0 : lastSyncedRecord.timestamp) {
                     url.searchParams.append('sinceTimestamp', lastSyncedRecord.timestamp.toISOString());
                 }
-                return [4 /*yield*/, fetch(url.toString(), {
-                        headers: {
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                            "Accept": "application/json",
-                            "Accept-Language": "en-US,en;q=0.9",
+                dataAPIResponse = void 0;
+                retries = 0;
+                MAX_RETRIES = 3;
+                success = false;
+                _loop_1 = function () {
+                    var backoffTime_1, err_1;
+                    return __generator(this, function (_d) {
+                        switch (_d.label) {
+                            case 0:
+                                _d.trys.push([0, 4, , 6]);
+                                return [4 /*yield*/, fetch(url.toString(), {
+                                        headers: {
+                                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                                            "Accept": "application/json",
+                                            "Accept-Language": "en-US,en;q=0.9",
+                                        }
+                                    })];
+                            case 1:
+                                dataAPIResponse = _d.sent();
+                                if (!(dataAPIResponse.status === 429)) return [3 /*break*/, 3];
+                                retries++;
+                                backoffTime_1 = 30000 * retries;
+                                console.warn("[Sync] Rate limited (429) for ".concat(solarUnit.serialNumber, ". Retrying in ").concat(backoffTime_1 / 1000, "s... (Attempt ").concat(retries, "/").concat(MAX_RETRIES, ")"));
+                                return [4 /*yield*/, new Promise(function (resolve) { return setTimeout(resolve, backoffTime_1); })];
+                            case 2:
+                                _d.sent();
+                                return [2 /*return*/, "continue"];
+                            case 3:
+                                if (!dataAPIResponse.ok) {
+                                    console.warn("Failed to fetch energy records for ".concat(solarUnit.serialNumber, ": ").concat(dataAPIResponse.statusText));
+                                    hasMoreData = false; // Stop loop on non-retryable error
+                                    return [2 /*return*/, "break"];
+                                }
+                                success = true;
+                                return [3 /*break*/, 6];
+                            case 4:
+                                err_1 = _d.sent();
+                                console.error("[Sync] Network error for ".concat(solarUnit.serialNumber, ":"), err_1);
+                                retries++;
+                                return [4 /*yield*/, new Promise(function (resolve) { return setTimeout(resolve, 5000); })];
+                            case 5:
+                                _d.sent(); // 5s wait on network error
+                                return [3 /*break*/, 6];
+                            case 6: return [2 /*return*/];
                         }
-                    })];
+                    });
+                };
+                _c.label = 3;
             case 3:
-                dataAPIResponse = _c.sent();
-                if (!dataAPIResponse.ok) {
-                    console.warn("Failed to fetch energy records for ".concat(solarUnit.serialNumber, ": ").concat(dataAPIResponse.statusText));
-                    hasMoreData = false; // Stop loop on error
-                    return [3 /*break*/, 9];
+                if (!(retries < MAX_RETRIES && !success)) return [3 /*break*/, 5];
+                return [5 /*yield**/, _loop_1()];
+            case 4:
+                state_1 = _c.sent();
+                if (state_1 === "break")
+                    return [3 /*break*/, 5];
+                return [3 /*break*/, 3];
+            case 5:
+                if (!success || !dataAPIResponse) {
+                    console.error("[Sync] Failed to sync ".concat(solarUnit.serialNumber, " after ").concat(MAX_RETRIES, " attempts."));
+                    hasMoreData = false;
+                    return [3 /*break*/, 11];
                 }
                 _b = (_a = exports.DataAPIEnergyGenerationRecordDto
                     .array())
                     .parse;
                 return [4 /*yield*/, dataAPIResponse.json()];
-            case 4:
+            case 6:
                 newRecords = _b.apply(_a, [_c.sent()]);
-                if (!(newRecords.length > 0)) return [3 /*break*/, 7];
+                if (!(newRecords.length > 0)) return [3 /*break*/, 9];
                 recordsToInsert = newRecords.map(function (record) { return ({
                     solarUnitId: solarUnit._id,
                     energyGenerated: record.energyGenerated,
@@ -104,30 +152,30 @@ var processSolarUnit = function (solarUnit) { return __awaiter(void 0, void 0, v
                     intervalHours: record.intervalHours,
                 }); });
                 return [4 /*yield*/, EnergyGenerationRecord_1.EnergyGenerationRecord.insertMany(recordsToInsert)];
-            case 5:
+            case 7:
                 _c.sent();
                 batchCount++;
                 console.log("[Sync] Batch ".concat(batchCount, ": Synced ").concat(recordsToInsert.length, " records for ").concat(solarUnit.serialNumber));
                 anomalyService = new anomaly_service_1.AnomalyDetectionService();
                 return [4 /*yield*/, anomalyService.analyzeRecords(recordsToInsert)];
-            case 6:
+            case 8:
                 _c.sent();
                 // If we received fewer records than the limit, we are caught up
                 if (newRecords.length < BATCH_LIMIT) {
                     hasMoreData = false;
                 }
-                return [3 /*break*/, 8];
-            case 7:
+                return [3 /*break*/, 10];
+            case 9:
                 console.log("[Sync] No new records for ".concat(solarUnit.serialNumber));
                 hasMoreData = false;
-                _c.label = 8;
-            case 8: return [3 /*break*/, 1];
-            case 9: return [3 /*break*/, 11];
-            case 10:
+                _c.label = 10;
+            case 10: return [3 /*break*/, 1];
+            case 11: return [3 /*break*/, 13];
+            case 12:
                 error_1 = _c.sent();
                 console.error("Error processing solar unit ".concat(solarUnit.serialNumber, ":"), error_1);
-                return [3 /*break*/, 11];
-            case 11: return [2 /*return*/];
+                return [3 /*break*/, 13];
+            case 13: return [2 /*return*/];
         }
     });
 }); };
@@ -156,10 +204,10 @@ var syncEnergyGenerationRecords = function (specificSolarUnitId) { return __awai
                 return [4 /*yield*/, processSolarUnit(unit)];
             case 3:
                 _a.sent();
-                // Add a small delay between units to be nice to the API
-                return [4 /*yield*/, new Promise(function (resolve) { return setTimeout(resolve, 2000); })];
+                // Increase delay to 10 seconds to avoid "sticky" rate limits
+                return [4 /*yield*/, new Promise(function (resolve) { return setTimeout(resolve, 10000); })];
             case 4:
-                // Add a small delay between units to be nice to the API
+                // Increase delay to 10 seconds to avoid "sticky" rate limits
                 _a.sent();
                 _a.label = 5;
             case 5:
