@@ -104,7 +104,13 @@ var syncMiddleware = function (req, res, next) { return __awaiter(void 0, void 0
                                     _c.label = 2;
                                 case 2:
                                     _c.trys.push([2, 4, , 5]);
-                                    return [4 /*yield*/, fetch(url)];
+                                    return [4 /*yield*/, fetch(url, {
+                                            headers: {
+                                                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                                                "Accept": "application/json",
+                                                "Accept-Language": "en-US,en;q=0.9",
+                                            }
+                                        })];
                                 case 3:
                                     dataAPIResponse = _c.sent();
                                     return [3 /*break*/, 5];
