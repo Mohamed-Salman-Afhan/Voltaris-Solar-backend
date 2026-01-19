@@ -95,7 +95,7 @@ var processSolarUnit = function (solarUnit) { return __awaiter(void 0, void 0, v
                                     })];
                             case 1:
                                 dataAPIResponse = _d.sent();
-                                if (!(dataAPIResponse.status === 429)) return [3 /*break*/, 3];
+                                if (!(dataAPIResponse.status === 429 || dataAPIResponse.statusText === "Too Many Requests")) return [3 /*break*/, 3];
                                 retries++;
                                 backoffTime_1 = 30000 * retries;
                                 console.warn("[Sync] Rate limited (429) for ".concat(solarUnit.serialNumber, ". Retrying in ").concat(backoffTime_1 / 1000, "s... (Attempt ").concat(retries, "/").concat(MAX_RETRIES, ")"));
@@ -105,7 +105,8 @@ var processSolarUnit = function (solarUnit) { return __awaiter(void 0, void 0, v
                                 return [2 /*return*/, "continue"];
                             case 3:
                                 if (!dataAPIResponse.ok) {
-                                    console.warn("Failed to fetch energy records for ".concat(solarUnit.serialNumber, ": ").concat(dataAPIResponse.statusText));
+                                    // Log the actual status code to help debugging
+                                    console.warn("Failed to fetch energy records for ".concat(solarUnit.serialNumber, ": Status ").concat(dataAPIResponse.status, " - ").concat(dataAPIResponse.statusText));
                                     hasMoreData = false; // Stop loop on non-retryable error
                                     return [2 /*return*/, "break"];
                                 }

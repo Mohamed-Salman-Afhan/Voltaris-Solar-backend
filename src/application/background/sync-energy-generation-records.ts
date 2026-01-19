@@ -55,7 +55,8 @@ const processSolarUnit = async (solarUnit: any) => {
                         }
                     });
 
-                    if (dataAPIResponse.status === 429) {
+                    // Check for 429 OR "Too Many Requests" text (some proxies change the code)
+                    if (dataAPIResponse.status === 429 || dataAPIResponse.statusText === "Too Many Requests") {
                         retries++;
                         const backoffTime = 30000 * retries; // 30s, 60s, 90s
                         console.warn(`[Sync] Rate limited (429) for ${solarUnit.serialNumber}. Retrying in ${backoffTime / 1000}s... (Attempt ${retries}/${MAX_RETRIES})`);
@@ -64,7 +65,8 @@ const processSolarUnit = async (solarUnit: any) => {
                     }
 
                     if (!dataAPIResponse.ok) {
-                        console.warn(`Failed to fetch energy records for ${solarUnit.serialNumber}: ${dataAPIResponse.statusText}`);
+                        // Log the actual status code to help debugging
+                        console.warn(`Failed to fetch energy records for ${solarUnit.serialNumber}: Status ${dataAPIResponse.status} - ${dataAPIResponse.statusText}`);
                         hasMoreData = false; // Stop loop on non-retryable error
                         break; // Break retry loop
                     }
