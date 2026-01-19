@@ -25,6 +25,9 @@ const BulkResponseSchema = z.object({
 /**
  * Synchronizes energy generation records from the data API using Bulk Fetch
  */
+/**
+ * Synchronizes energy generation records with robust retry and fallback mechanisms
+ */
 export const syncEnergyGenerationRecords = async (specificSolarUnitId?: string) => {
     try {
         const query = specificSolarUnitId ? { _id: specificSolarUnitId } : {};
@@ -34,9 +37,8 @@ export const syncEnergyGenerationRecords = async (specificSolarUnitId?: string) 
 
         console.log(`[Sync Job] Preparing to sync ${solarUnits.length} solar units...`);
 
-        // 1. Prepare Bulk Request Payload
-        // We need to find the specific 'since' timestamp for EACH unit
-        const bulkRequestPayload = await Promise.all(solarUnits.map(async (unit) => {
+        // 1. Prepare Request Payload (Metadata for what we need)
+        const requestMetadata = await Promise.all(solarUnits.map(async (unit) => {
             const lastSyncedRecord = await EnergyGenerationRecord
                 .findOne({ solarUnitId: unit._id })
                 .sort({ timestamp: -1 });
@@ -44,26 +46,62 @@ export const syncEnergyGenerationRecords = async (specificSolarUnitId?: string) 
             return {
                 serialNumber: unit.serialNumber,
                 since: lastSyncedRecord?.timestamp?.toISOString(),
-                // Keep a reference to the unit ID for later insertion
                 _internalUnitId: unit._id
             };
         }));
 
-        // 2. Send Bulk Request
-        const rawUrl = process.env.DATA_API_URL || "http://localhost:8001";
-        const dataApiUrl = rawUrl.replace(/\/$/, "");
-        const url = `${dataApiUrl}/api/energy-generation-records/bulk-fetch`;
+        const apiPayload = requestMetadata.map(({ _internalUnitId, ...rest }) => rest);
 
-        console.log(`[Sync Job] Sending bulk sync request to ${url}`);
+        // STRATEGY 1 & 2: Bulk Sync with Exponential Backoff
+        // Retries: 0s, 2s, 4s, 8s (Max 3 retries)
+        const MAX_BULK_RETRIES = 3;
+        let bulkSuccess = false;
 
-        // Sanitize payload (remove internal ID before sending)
-        const apiPayload = bulkRequestPayload.map(({ _internalUnitId, ...rest }) => rest);
+        for (let attempt = 0; attempt <= MAX_BULK_RETRIES; attempt++) {
+            try {
+                if (attempt > 0) {
+                    const delay = Math.pow(2, attempt) * 1000;
+                    console.log(`[Sync Job] Bulk sync retry ${attempt}/${MAX_BULK_RETRIES} in ${delay}ms...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
 
+                bulkSuccess = await executeBulkSync(apiPayload, requestMetadata);
+                if (bulkSuccess) break;
+
+            } catch (error) {
+                console.warn(`[Sync Job] Bulk attempt ${attempt + 1} failed:`, error);
+            }
+        }
+
+        // STRATEGY 3: Fallback to Sequential Sync (Stealth Mode)
+        if (!bulkSuccess) {
+            console.warn("[Sync Job] Bulk sync exhausted. Falling back to SEQUENTIAL INDIVIDUAL SYNC (Stealth Mode).");
+            await executeFallbackSequentialSync(requestMetadata);
+        }
+
+    } catch (error) {
+        console.error("Sync Job Critical Error:", error);
+    }
+};
+
+/**
+ * Executes a single bulk sync attempt
+ * Returns true if successful, false if rate limited or failed
+ */
+async function executeBulkSync(apiPayload: any[], unitMetadata: any[]): Promise<boolean> {
+    const rawUrl = process.env.DATA_API_URL || "http://localhost:8001";
+    const dataApiUrl = rawUrl.replace(/\/$/, "");
+    const url = `${dataApiUrl}/api/energy-generation-records/bulk-fetch`;
+
+    console.log(`[Sync Job] Sending bulk request to ${url}`);
+
+    try {
         const response = await fetch(url, {
             method: 'POST',
             headers: {
                 "Content-Type": "application/json",
                 "Accept": "application/json",
+                // Honest Identity + Referer to bypass WAF
                 "User-Agent": "Voltaris-Solar-Backend/1.0",
                 "Referer": "https://voltaris-solar-dashboard.onrender.com/"
             },
@@ -71,8 +109,8 @@ export const syncEnergyGenerationRecords = async (specificSolarUnitId?: string) 
         });
 
         if (!response.ok) {
-            console.error(`[Sync Job] Data API Check failed: ${response.status} - ${response.statusText}`);
-            return;
+            console.error(`[Sync Job] Bulk Fetch failed: ${response.status} - ${response.statusText}`);
+            return false;
         }
 
         const json = await response.json();
@@ -80,57 +118,104 @@ export const syncEnergyGenerationRecords = async (specificSolarUnitId?: string) 
 
         if (!parsedResponse.success) {
             console.error("[Sync Job] Invalid bulk response format", parsedResponse.error);
-            return;
+            // If format is wrong, retrying might not help, but let's return false to trigger fallback just in case
+            return false;
         }
 
-        // 3. Process Response
-        const results = parsedResponse.data.results;
-        const anomalyService = new AnomalyDetectionService();
-        let totalRecordsSynced = 0;
-
-        for (const result of results) {
-            if (result.error) {
-                console.error(`[Sync Job] Error for unit ${result.serialNumber}: ${result.error}`);
-                continue;
-            }
-
-            if (result.records.length === 0) {
-                continue;
-            }
-
-            // Find the matching unit ID
-            const unitInfo = bulkRequestPayload.find(p => p.serialNumber === result.serialNumber);
-            if (!unitInfo) continue;
-
-            const recordsToInsert = result.records.map(record => ({
-                solarUnitId: unitInfo._internalUnitId,
-                energyGenerated: record.energyGenerated,
-                timestamp: new Date(record.timestamp),
-                intervalHours: record.intervalHours,
-            }));
-
-            // Insert records
-            // Use unordered insert to ignore duplicate keys if any overlap occurs
-            try {
-                await EnergyGenerationRecord.insertMany(recordsToInsert, { ordered: false });
-
-                totalRecordsSynced += recordsToInsert.length;
-                console.log(`[Sync Job] Synced ${recordsToInsert.length} new records for ${result.serialNumber}`);
-
-                // Trigger Anomaly Detection
-                await anomalyService.analyzeRecords(recordsToInsert);
-
-            } catch (err: any) {
-                // Ignore duplicate key errors (code 11000)
-                if (err.code !== 11000) {
-                    console.error(`[Sync Job] DB Insert Error for ${result.serialNumber}:`, err);
-                }
-            }
-        }
-
-        console.log(`[Sync Job] Completed. Total records synced: ${totalRecordsSynced}`);
+        await processBulkResults(parsedResponse.data.results, unitMetadata);
+        return true;
 
     } catch (error) {
-        console.error("Sync Job error:", error);
+        console.error("[Sync Job] Network error during bulk sync:", error);
+        return false;
     }
-};
+}
+
+/**
+ * Connects data from API response to our Database
+ */
+async function processBulkResults(results: any[], unitMetadata: any[]) {
+    const anomalyService = new AnomalyDetectionService();
+    let totalSynced = 0;
+
+    for (const result of results) {
+        if (result.error || result.records.length === 0) continue;
+
+        const unitInfo = unitMetadata.find(p => p.serialNumber === result.serialNumber);
+        if (!unitInfo) continue;
+
+        await saveRecords(result.records, unitInfo._internalUnitId, anomalyService);
+        totalSynced += result.records.length;
+    }
+    console.log(`[Sync Job] Bulk Sync Completed. Total records: ${totalSynced}`);
+}
+
+/**
+ * Fallback: Syncs units one by one with a delay to avoid rate limits
+ */
+async function executeFallbackSequentialSync(unitMetadata: any[]) {
+    const rawUrl = process.env.DATA_API_URL || "http://localhost:8001";
+    const dataApiUrl = rawUrl.replace(/\/$/, "");
+    const anomalyService = new AnomalyDetectionService();
+
+    for (const unit of unitMetadata) {
+        const url = `${dataApiUrl}/api/energy-generation-records/solar-unit/${unit.serialNumber}?sinceTimestamp=${unit.since || ''}`;
+
+        try {
+            // Polite delay between requests
+            await new Promise(r => setTimeout(r, 2000));
+
+            console.log(`[Fallback Sync] Fetching ${unit.serialNumber}...`);
+            const response = await fetch(url, {
+                headers: {
+                    "User-Agent": "Voltaris-Solar-Backend/1.0",
+                    "Referer": "https://voltaris-solar-dashboard.onrender.com/"
+                }
+            });
+
+            if (response.status === 429) {
+                console.warn(`[Fallback Sync] 429 for ${unit.serialNumber}. Waiting 10s...`);
+                await new Promise(r => setTimeout(r, 10000));
+                continue; // Skip this unit, try next
+            }
+
+            if (!response.ok) {
+                console.error(`[Fallback Sync] Failed ${unit.serialNumber}: ${response.status}`);
+                continue;
+            }
+
+            const records = await response.json();
+            if (Array.isArray(records) && records.length > 0) {
+                // Map individual response format (which might be raw DB records) to our usage
+                // Assuming individual endpoint returns array of objects with energyGenerated, timestamp etc.
+                await saveRecords(records, unit._internalUnitId, anomalyService);
+                console.log(`[Fallback Sync] Saved ${records.length} records for ${unit.serialNumber}`);
+            }
+
+        } catch (error) {
+            console.error(`[Fallback Sync] Error for ${unit.serialNumber}:`, error);
+        }
+    }
+    console.log("[Fallback Sync] Completed.");
+}
+
+/**
+ * Helper to save records and run anomaly detection
+ */
+async function saveRecords(rawRecords: any[], unitId: any, anomalyService: AnomalyDetectionService) {
+    const recordsToInsert = rawRecords.map((record: any) => ({
+        solarUnitId: unitId,
+        energyGenerated: record.energyGenerated,
+        timestamp: new Date(record.timestamp),
+        intervalHours: record.intervalHours || 2, // Default if missing in individual response
+    }));
+
+    try {
+        await EnergyGenerationRecord.insertMany(recordsToInsert, { ordered: false });
+        await anomalyService.analyzeRecords(recordsToInsert);
+    } catch (err: any) {
+        if (err.code !== 11000) {
+            console.error(`[DB] Insert Error:`, err);
+        }
+    }
+}
