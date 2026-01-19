@@ -45,11 +45,12 @@ export const syncMiddleware = async (
             return next();
         }
 
-        // 1. Identify units that need syncing (older than 2 hours)
-        const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+        // 1. Identify units that need syncing (older than 10 minutes)
+        // Reduced from 2 hours to 10 minutes to allow near-realtime updates when user logs in
+        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
 
         const unitsToSync = solarUnits.filter(unit => {
-            return !unit.lastSyncedAt || unit.lastSyncedAt < twoHoursAgo;
+            return !unit.lastSyncedAt || unit.lastSyncedAt < tenMinutesAgo;
         });
 
         if (unitsToSync.length === 0) {
