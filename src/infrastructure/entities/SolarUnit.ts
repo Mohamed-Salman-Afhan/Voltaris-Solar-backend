@@ -15,6 +15,7 @@ export interface ISolarUnit extends mongoose.Document {
   country?: string;
   createdAt: Date;
   updatedAt: Date;
+  lastSyncedAt?: Date;
 }
 
 const solarUnitSchema = new mongoose.Schema({
@@ -46,6 +47,7 @@ const solarUnitSchema = new mongoose.Schema({
   },
   city: { type: String },
   country: { type: String },
+  lastSyncedAt: { type: Date },
 }, { timestamps: true });
 
 export const SolarUnit = mongoose.model<ISolarUnit>("SolarUnit", solarUnitSchema);

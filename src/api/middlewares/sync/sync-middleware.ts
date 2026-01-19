@@ -38,10 +38,18 @@ export const syncMiddleware = async (
         }
 
         // Fetch latest records from data API
-        // Fetch latest records from data API
         const rawUrl = process.env.DATA_API_URL || "http://localhost:8001";
         const dataApiUrl = rawUrl.replace(/\/$/, "");
         const url = `${dataApiUrl}/api/energy-generation-records/solar-unit/${solarUnit.serialNumber}`;
+
+        // Rate limit: Only sync every 2 hours
+        if (solarUnit.lastSyncedAt) {
+            const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+            if (solarUnit.lastSyncedAt > twoHoursAgo) {
+                // console.log(`[SyncMiddleware] Skipping sync for ${solarUnit.serialNumber}, last synced at ${solarUnit.lastSyncedAt}`);
+                return next();
+            }
+        }
 
         let dataAPIResponse;
         try {
@@ -83,10 +91,17 @@ export const syncMiddleware = async (
             }));
 
             await EnergyGenerationRecord.insertMany(recordsToInsert);
+            await EnergyGenerationRecord.insertMany(recordsToInsert);
             console.log(`Synced ${recordsToInsert.length} new energy generation records`);
         } else {
             console.log("No new records to sync");
         }
+
+        // Update last synced timestamp
+        await SolarUnit.updateOne(
+            { _id: solarUnit._id },
+            { $set: { lastSyncedAt: new Date() } }
+        );
 
         next();
     } catch (error) {

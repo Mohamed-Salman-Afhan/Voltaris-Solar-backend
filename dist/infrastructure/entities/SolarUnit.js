@@ -35,6 +35,7 @@ var solarUnitSchema = new mongoose_1.default.Schema({
     },
     city: { type: String },
     country: { type: String },
+    lastSyncedAt: { type: Date },
 }, { timestamps: true });
 exports.SolarUnit = mongoose_1.default.model("SolarUnit", solarUnitSchema);
 //# sourceMappingURL=SolarUnit.js.map

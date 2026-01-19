@@ -56,11 +56,11 @@ exports.DataAPIEnergyGenerationRecordDto = zod_1.z.object({
  * Fetches latest records and merges new data with existing records
  */
 var syncMiddleware = function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
-    var auth, user, solarUnit_1, rawUrl, dataApiUrl, url, dataAPIResponse, error_1, respText, latestEnergyGenerationRecords, _a, _b, lastSyncedRecord_1, newRecords, recordsToInsert, error_2;
+    var auth, user, solarUnit_1, rawUrl, dataApiUrl, url, twoHoursAgo, dataAPIResponse, error_1, respText, latestEnergyGenerationRecords, _a, _b, lastSyncedRecord_1, newRecords, recordsToInsert, error_2;
     return __generator(this, function (_c) {
         switch (_c.label) {
             case 0:
-                _c.trys.push([0, 14, , 15]);
+                _c.trys.push([0, 16, , 17]);
                 auth = (0, express_1.getAuth)(req);
                 return [4 /*yield*/, User_1.User.findOne({ clerkUserId: auth.userId })];
             case 1:
@@ -77,6 +77,14 @@ var syncMiddleware = function (req, res, next) { return __awaiter(void 0, void 0
                 rawUrl = process.env.DATA_API_URL || "http://localhost:8001";
                 dataApiUrl = rawUrl.replace(/\/$/, "");
                 url = "".concat(dataApiUrl, "/api/energy-generation-records/solar-unit/").concat(solarUnit_1.serialNumber);
+                // Rate limit: Only sync every 2 hours
+                if (solarUnit_1.lastSyncedAt) {
+                    twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+                    if (solarUnit_1.lastSyncedAt > twoHoursAgo) {
+                        // console.log(`[SyncMiddleware] Skipping sync for ${solarUnit.serialNumber}, last synced at ${solarUnit.lastSyncedAt}`);
+                        return [2 /*return*/, next()];
+                    }
+                }
                 dataAPIResponse = void 0;
                 _c.label = 3;
             case 3:
@@ -114,7 +122,7 @@ var syncMiddleware = function (req, res, next) { return __awaiter(void 0, void 0
                         return true; // First sync, add all
                     return new Date(apiRecord.timestamp) > lastSyncedRecord_1.timestamp;
                 });
-                if (!(newRecords.length > 0)) return [3 /*break*/, 12];
+                if (!(newRecords.length > 0)) return [3 /*break*/, 13];
                 recordsToInsert = newRecords.map(function (record) { return ({
                     solarUnitId: solarUnit_1._id,
                     energyGenerated: record.energyGenerated,
@@ -124,20 +132,28 @@ var syncMiddleware = function (req, res, next) { return __awaiter(void 0, void 0
                 return [4 /*yield*/, EnergyGenerationRecord_1.EnergyGenerationRecord.insertMany(recordsToInsert)];
             case 11:
                 _c.sent();
-                console.log("Synced ".concat(recordsToInsert.length, " new energy generation records"));
-                return [3 /*break*/, 13];
+                return [4 /*yield*/, EnergyGenerationRecord_1.EnergyGenerationRecord.insertMany(recordsToInsert)];
             case 12:
-                console.log("No new records to sync");
-                _c.label = 13;
+                _c.sent();
+                console.log("Synced ".concat(recordsToInsert.length, " new energy generation records"));
+                return [3 /*break*/, 14];
             case 13:
+                console.log("No new records to sync");
+                _c.label = 14;
+            case 14: 
+            // Update last synced timestamp
+            return [4 /*yield*/, SolarUnit_1.SolarUnit.updateOne({ _id: solarUnit_1._id }, { $set: { lastSyncedAt: new Date() } })];
+            case 15:
+                // Update last synced timestamp
+                _c.sent();
                 next();
-                return [3 /*break*/, 15];
-            case 14:
+                return [3 /*break*/, 17];
+            case 16:
                 error_2 = _c.sent();
                 console.error("Sync middleware error:", error_2);
                 next(error_2);
-                return [3 /*break*/, 15];
-            case 15: return [2 /*return*/];
+                return [3 /*break*/, 17];
+            case 17: return [2 /*return*/];
         }
     });
 }); };
