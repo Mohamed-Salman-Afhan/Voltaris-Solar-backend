@@ -3,144 +3,130 @@ import { EnergyGenerationRecord } from "../../infrastructure/entities/EnergyGene
 import { SolarUnit } from "../../infrastructure/entities/SolarUnit";
 import { AnomalyDetectionService } from "../services/anomaly.service";
 
-export const DataAPIEnergyGenerationRecordDto = z.object({
-    _id: z.string(),
+// Schema for individual records in the bulk response
+const BulkRecordSchema = z.object({
     serialNumber: z.string(),
     energyGenerated: z.number(),
     timestamp: z.string(),
     intervalHours: z.number(),
-    __v: z.number(),
+});
+
+// Schema for the bulk response item
+const BulkResponseItemSchema = z.object({
+    serialNumber: z.string(),
+    records: z.array(BulkRecordSchema),
+    error: z.string().optional(),
+});
+
+const BulkResponseSchema = z.object({
+    results: z.array(BulkResponseItemSchema),
 });
 
 /**
- * Synchronizes energy generation records from the data API
- * Fetches latest records and merges new data with existing records
- */
-
-const processSolarUnit = async (solarUnit: any) => {
-    try {
-        let hasMoreData = true;
-        let batchCount = 0;
-        const BATCH_LIMIT = 1000; // Must match Data API limit
-
-        while (hasMoreData) {
-            // Get latest synced timestamp (refreshed on every loop iteration)
-            const lastSyncedRecord = await EnergyGenerationRecord
-                .findOne({ solarUnitId: solarUnit._id })
-                .sort({ timestamp: -1 });
-
-            // Build URL
-            const rawUrl = process.env.DATA_API_URL || "http://localhost:8001";
-            const dataApiUrl = rawUrl.replace(/\/$/, "");
-            const url = new URL(`${dataApiUrl}/api/energy-generation-records/solar-unit/${solarUnit.serialNumber}`);
-
-            if (lastSyncedRecord?.timestamp) {
-                url.searchParams.append('sinceTimestamp', lastSyncedRecord.timestamp.toISOString());
-            }
-
-            // Fetch latest records from data API
-            // Add Cloudflare bypass headers + Retry logic
-            let dataAPIResponse;
-            let retries = 0;
-            const MAX_RETRIES = 3;
-            let success = false;
-
-            while (retries < MAX_RETRIES && !success) {
-                try {
-                    dataAPIResponse = await fetch(url.toString(), {
-                        headers: {
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                            "Accept": "application/json",
-                            "Accept-Language": "en-US,en;q=0.9",
-                        }
-                    });
-
-                    // Check for 429 OR "Too Many Requests" text (some proxies change the code)
-                    if (dataAPIResponse.status === 429 || dataAPIResponse.statusText === "Too Many Requests") {
-                        retries++;
-                        const backoffTime = 30000 * retries; // 30s, 60s, 90s
-                        console.warn(`[Sync] Rate limited (429) for ${solarUnit.serialNumber}. Retrying in ${backoffTime / 1000}s... (Attempt ${retries}/${MAX_RETRIES})`);
-                        await new Promise(resolve => setTimeout(resolve, backoffTime));
-                        continue;
-                    }
-
-                    if (!dataAPIResponse.ok) {
-                        // Log the actual status code to help debugging
-                        console.warn(`Failed to fetch energy records for ${solarUnit.serialNumber}: Status ${dataAPIResponse.status} - ${dataAPIResponse.statusText}`);
-                        hasMoreData = false; // Stop loop on non-retryable error
-                        break; // Break retry loop
-                    }
-
-                    success = true;
-
-                } catch (err) {
-                    console.error(`[Sync] Network error for ${solarUnit.serialNumber}:`, err);
-                    retries++;
-                    await new Promise(resolve => setTimeout(resolve, 5000)); // 5s wait on network error
-                }
-            }
-
-            if (!success || !dataAPIResponse) {
-                console.error(`[Sync] Failed to sync ${solarUnit.serialNumber} after ${MAX_RETRIES} attempts.`);
-                hasMoreData = false;
-                break;
-            }
-
-            const newRecords = DataAPIEnergyGenerationRecordDto
-                .array()
-                .parse(await dataAPIResponse.json());
-
-            if (newRecords.length > 0) {
-                // Transform API records to match schema
-                const recordsToInsert = newRecords.map(record => ({
-                    solarUnitId: solarUnit._id,
-                    energyGenerated: record.energyGenerated,
-                    timestamp: new Date(record.timestamp),
-                    intervalHours: record.intervalHours,
-                }));
-
-                await EnergyGenerationRecord.insertMany(recordsToInsert);
-
-                batchCount++;
-                console.log(`[Sync] Batch ${batchCount}: Synced ${recordsToInsert.length} records for ${solarUnit.serialNumber}`);
-
-                // Trigger Anomaly Detection
-                const anomalyService = new AnomalyDetectionService();
-                await anomalyService.analyzeRecords(recordsToInsert);
-
-                // If we received fewer records than the limit, we are caught up
-                if (newRecords.length < BATCH_LIMIT) {
-                    hasMoreData = false;
-                }
-                // Otherwise, loop again immediately to get the next 1000
-            } else {
-                console.log(`[Sync] No new records for ${solarUnit.serialNumber}`);
-                hasMoreData = false;
-            }
-        }
-    } catch (error) {
-        console.error(`Error processing solar unit ${solarUnit.serialNumber}:`, error);
-    }
-};
-
-/**
- * Synchronizes energy generation records from the data API
- * Fetches latest records and merges new data with existing records
+ * Synchronizes energy generation records from the data API using Bulk Fetch
  */
 export const syncEnergyGenerationRecords = async (specificSolarUnitId?: string) => {
     try {
         const query = specificSolarUnitId ? { _id: specificSolarUnitId } : {};
         const solarUnits = await SolarUnit.find(query);
 
-        // Process SEQUENTIALLY to avoid hitting Data API rate limits (429)
-        // especially on startup when syncing all units.
-        console.log(`[Sync Job] Found ${solarUnits.length} solar units to sync.`);
+        if (solarUnits.length === 0) return;
 
-        for (const unit of solarUnits) {
-            await processSolarUnit(unit);
-            // Increase delay to 10 seconds to avoid "sticky" rate limits
-            await new Promise(resolve => setTimeout(resolve, 10000));
+        console.log(`[Sync Job] Preparing to sync ${solarUnits.length} solar units...`);
+
+        // 1. Prepare Bulk Request Payload
+        // We need to find the specific 'since' timestamp for EACH unit
+        const bulkRequestPayload = await Promise.all(solarUnits.map(async (unit) => {
+            const lastSyncedRecord = await EnergyGenerationRecord
+                .findOne({ solarUnitId: unit._id })
+                .sort({ timestamp: -1 });
+
+            return {
+                serialNumber: unit.serialNumber,
+                since: lastSyncedRecord?.timestamp?.toISOString(),
+                // Keep a reference to the unit ID for later insertion
+                _internalUnitId: unit._id
+            };
+        }));
+
+        // 2. Send Bulk Request
+        const rawUrl = process.env.DATA_API_URL || "http://localhost:8001";
+        const dataApiUrl = rawUrl.replace(/\/$/, "");
+        const url = `${dataApiUrl}/api/energy-generation-records/bulk-fetch`;
+
+        console.log(`[Sync Job] Sending bulk sync request to ${url}`);
+
+        // Sanitize payload (remove internal ID before sending)
+        const apiPayload = bulkRequestPayload.map(({ _internalUnitId, ...rest }) => rest);
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+            },
+            body: JSON.stringify(apiPayload)
+        });
+
+        if (!response.ok) {
+            console.error(`[Sync Job] Data API Check failed: ${response.status} - ${response.statusText}`);
+            return;
         }
+
+        const json = await response.json();
+        const parsedResponse = BulkResponseSchema.safeParse(json);
+
+        if (!parsedResponse.success) {
+            console.error("[Sync Job] Invalid bulk response format", parsedResponse.error);
+            return;
+        }
+
+        // 3. Process Response
+        const results = parsedResponse.data.results;
+        const anomalyService = new AnomalyDetectionService();
+        let totalRecordsSynced = 0;
+
+        for (const result of results) {
+            if (result.error) {
+                console.error(`[Sync Job] Error for unit ${result.serialNumber}: ${result.error}`);
+                continue;
+            }
+
+            if (result.records.length === 0) {
+                continue;
+            }
+
+            // Find the matching unit ID
+            const unitInfo = bulkRequestPayload.find(p => p.serialNumber === result.serialNumber);
+            if (!unitInfo) continue;
+
+            const recordsToInsert = result.records.map(record => ({
+                solarUnitId: unitInfo._internalUnitId,
+                energyGenerated: record.energyGenerated,
+                timestamp: new Date(record.timestamp),
+                intervalHours: record.intervalHours,
+            }));
+
+            // Insert records
+            // Use unordered insert to ignore duplicate keys if any overlap occurs
+            try {
+                await EnergyGenerationRecord.insertMany(recordsToInsert, { ordered: false });
+
+                totalRecordsSynced += recordsToInsert.length;
+                console.log(`[Sync Job] Synced ${recordsToInsert.length} new records for ${result.serialNumber}`);
+
+                // Trigger Anomaly Detection
+                await anomalyService.analyzeRecords(recordsToInsert);
+
+            } catch (err: any) {
+                // Ignore duplicate key errors (code 11000)
+                if (err.code !== 11000) {
+                    console.error(`[Sync Job] DB Insert Error for ${result.serialNumber}:`, err);
+                }
+            }
+        }
+
+        console.log(`[Sync Job] Completed. Total records synced: ${totalRecordsSynced}`);
 
     } catch (error) {
         console.error("Sync Job error:", error);
