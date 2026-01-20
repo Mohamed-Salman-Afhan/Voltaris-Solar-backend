@@ -1,9 +1,10 @@
-
 import { SolarUnit } from "../infrastructure/entities/SolarUnit";
 import { EnergyGenerationRecord } from "../infrastructure/entities/EnergyGenerationRecord";
 import { AnomalyDetectionService } from "./services/anomaly.service";
 import { syncEnergyGenerationRecords } from "./background/sync-energy-generation-records";
 import { generateMonthlyInvoices } from "./background/generate-invoices";
+import { EnergySimulationService } from "./services/energy-simulation.service";
+import { addHours } from "date-fns";
 
 export class SolarUnitProvisioningService {
 
@@ -54,12 +55,42 @@ export class SolarUnitProvisioningService {
             });
 
             if (!response.ok) {
-                const errText = await response.text();
-                throw new Error(`Seed API failed (${response.status}) at ${DATA_API_URL}: ${errText.substring(0, 200)}`);
+                console.warn(`[Provisioning] Seed API blocked (${response.status}). Switching to INTERNAL SEEDING.`);
+                await this.seedHistoryLocally(solarUnit);
             }
         } catch (err) {
-            console.error(`[Provisioning] Seed Error:`, err);
-            throw err; // Propagate error to stop the pipeline
+            console.warn(`[Provisioning] Seed API unreachable. Switching to INTERNAL SEEDING. Error: ${err}`);
+            await this.seedHistoryLocally(solarUnit);
+        }
+    }
+
+    private static async seedHistoryLocally(solarUnit: any) {
+        console.log(`[Provisioning] Generating 30 days of history locally for ${solarUnit.serialNumber}...`);
+        try {
+            const endDate = new Date();
+            // Start from installation date or 30 days ago
+            let currentDate = solarUnit.installationDate ? new Date(solarUnit.installationDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+            const records: any[] = [];
+
+            while (currentDate <= endDate) {
+                const energy = EnergySimulationService.calculateEnergyGeneration(currentDate);
+                records.push({
+                    solarUnitId: solarUnit._id,
+                    energyGenerated: energy,
+                    timestamp: new Date(currentDate),
+                    intervalHours: 2
+                });
+                currentDate = addHours(currentDate, 2);
+            }
+
+            if (records.length > 0) {
+                await EnergyGenerationRecord.insertMany(records, { ordered: false });
+                console.log(`[Provisioning] Internally generated ${records.length} records.`);
+            }
+        } catch (e) {
+            console.error("[Provisioning] Internal Seeding Failed:", e);
+            throw e; // If even local fails, then we really fail
         }
     }
 
